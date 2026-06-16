@@ -44,3 +44,18 @@ class RsaService:
         with open(filename, "rb") as f:
             keyBytes = f.read()
         return rsa.PrivateKey.load_pkcs1(keyfile=keyBytes, format="PEM")
+    
+    def generateDigitanSignature(self, priv:rsa.PrivateKey, message: str) -> bytes:
+        return rsa.sign(message=message.encode("utf-8"), priv_key=priv, hash_method="SHA-1")
+
+    
+    def verifyDigitalSignature(message: str, signature: bytes, pub: rsa.PublicKey) -> bool:
+        try:
+            rsa.verify(
+                message.encode("utf-8"),
+                signature=signature,
+                pub_key=pub
+            )
+            return True
+        except:
+            return False

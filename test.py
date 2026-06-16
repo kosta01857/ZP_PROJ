@@ -10,17 +10,14 @@ def testPrintRsa():
 def testRsaExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(priv,pub, {})
+    rsaSvc.exportKeyPairToPem(pub, priv, {})
 
 def testRsaImportExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(priv,pub, {})
+    rsaSvc.exportKeyPairToPem(pub, priv, {})
     privImp = rsaSvc.importPrivateRsaKey("priv.pem")
     pubImp =  rsaSvc.importPublicRsaKey("pub.pem")
     assert priv.n == privImp.n, "priv errror"
     assert pub.n == pubImp.n, "pub errror"
-
-     
-testRsaImportExport()
-      
+    print("success")
