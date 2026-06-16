@@ -21,3 +21,21 @@ def testRsaImportExport():
     assert priv.n == privImp.n, "priv errror"
     assert pub.n == pubImp.n, "pub errror"
     print("success")
+
+
+
+def testDigialSignature():
+    message = "Some mock message"
+    rsaSvc = RsaService()
+    priv, pub = rsaSvc.generateKeyPair(2048)
+    sig = rsaSvc.generateDigitanSignature(priv=priv, message=message)
+    assert rsaSvc.verifyDigitalSignature(message,sig,pub) , "failed"
+    print("true")
+
+def testRsaEncryption():
+    message = "Some mock message"
+    rsaSvc = RsaService()
+    priv, pub = rsaSvc.generateKeyPair(2048)
+    C = rsaSvc.encryptMessage(message=message, pub=pub)
+    assert rsaSvc.decryptMessage(C,priv=priv) == message.encode() , "failed"
+    print("true")
