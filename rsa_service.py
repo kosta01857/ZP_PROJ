@@ -3,10 +3,10 @@ from domain import User
 
 
 def resolvePrivateKeyFileName(user: User):
-    pass
+    return "priv.pem"
 
 def resolvePublicKeyFileName(user: User):
-    pass
+    return "pub.pem"
 
 class RsaService:
     def generateKeyPair(self, size) -> tuple[rsa.PrivateKey, rsa.PublicKey]:
@@ -30,8 +30,8 @@ class RsaService:
 
     def exportKeyPairToPem(self, pub: rsa.PublicKey,
                             priv:rsa.PrivateKey, user: User):
-       self.exportPrivateKeyToPem(priv, user) 
-       self.exportPublicKeyToPem(pub, user) 
+        self.exportPrivateKeyToPem(priv, user) 
+        self.exportPublicKeyToPem(pub, user) 
     
     def importPublicRsaKey(self, filename: str) -> rsa.PublicKey:
         keyBytes = bytes()
