@@ -1,18 +1,14 @@
 from hashlib import sha1
 import rsa
+from rsa_service import RsaService
 
 class AuthService:
-    def sign(self, message, key):
-        #ovaj key treba da bude private key
-        hashedMessage = sha1(message.encode("utf-8")).digest()
-        signature = rsa.sign_hash(hashedMessage, key, "SHA-1")
-        return signature
+    def __init__(self):
+        self.rsaSvc = RsaService()
 
-    def verify(self, message, signature, key):
-        #ovaj treba da bude public
-        pass
-        
-    
-        
+    def sign(self, message, priv: rsa.PrivateKey) -> bytes:
+        return self.rsaSvc.generateDigitanSignature(priv,message)
 
-    
+    def verify(self, message:bytes, signature:bytes, pub: rsa.PublicKey) -> bool:
+        return self.rsaSvc.verifyDigitalSignature(message=message,signature=signature,pub=pub)
+        
