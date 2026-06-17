@@ -24,7 +24,7 @@ class EncryptionService:
         
         padder = padding.PKCS7(blockSize).padder()
         padded = ( padder.update(message) + padder.finalize())
-        cipher = Cipher(algorithmChoice, modes.CBC(iv))
+        cipher = Cipher(algorithmChoice, modes.CFB(iv))
         encryptor = cipher.encryptor()
         cipherText = (encryptor.update(padded) + encryptor.finalize())
         return iv, cipherText
@@ -42,7 +42,7 @@ class EncryptionService:
         else:
             raise ValueError("Unsupported algorithm")
 
-        cipher = Cipher(algorithmChoice,modes.CBC(iv))
+        cipher = Cipher(algorithmChoice,modes.CFB(iv))
         decryptor = cipher.decryptor()
         padded = (decryptor.update(message) + decryptor.finalize())
         unpadder = padding.PKCS7(block_size).unpadder()
