@@ -3,6 +3,7 @@ from compression_service import CompressionService
 from email_service import EmailService
 from encryption_service import EncryptionService
 from segmentation_service import SegmentationService
+import secrets
 
 class MainService:
 
@@ -12,8 +13,8 @@ class MainService:
     encryptionService = EncryptionService()
     segmentationService = SegmentationService()
 
-    def generateKs(self):
-        pass
+    def generateKs(self) -> int:
+        return secrets.randbits(128)
 
 
     def splitData(self,data):
