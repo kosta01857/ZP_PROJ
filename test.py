@@ -1,4 +1,6 @@
 from rsa_service import RsaService
+from main_service import MainService
+from encryption_service import EncryptionService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -25,19 +27,31 @@ def testRsaImportExport():
 
 
 def testDigialSignature():
-    message = "Some mock message"
+    message = "Some mock message".encode()
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
     sig = rsaSvc.generateDigitanSignature(priv=priv, message=message)
     assert rsaSvc.verifyDigitalSignature(message,sig,pub) , "failed"
-    print("true")
+    print("success")
 
 def testRsaEncryption():
-    message = "Some mock message"
+    message = "Some mock message".encode()
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
     C = rsaSvc.encryptMessage(message=message, pub=pub)
-    assert rsaSvc.decryptMessage(C,priv=priv) == message.encode() , "failed"
-    print("true")
-def testMessageEncryption():
-    pass
+    assert rsaSvc.decryptMessage(C,priv=priv) == message , "failed"
+    print("success")
+
+def testKsEncryption():
+    mainSvc =  MainService()
+    encSvc =  EncryptionService()
+    rsaSvc = RsaService()
+    priv, pub = rsaSvc.generateKeyPair(2048)
+    ks = mainSvc.generateKs()
+    encKs = encSvc.encryptKs(ks,pub)
+    decryptedKs = encSvc.decryptKs(encKs,priv)
+    assert ks == decryptedKs , "Ks do not match"
+    print("success")
+
+
+testKsEncryption()

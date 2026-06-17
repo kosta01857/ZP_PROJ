@@ -2,10 +2,13 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 import rsa
 import secrets
+from rsa_service import RsaService
 
 class EncryptionService:
-    def encryptMessage(self, message: bytes, Ks: int, algorithm: str):
+    def __init__(self):
+        self.rsaSvc = RsaService()
 
+    def encryptMessage(self, message: bytes, Ks: int, algorithm: str):
         if algorithm == "AES":
             algorithmChoice = algorithms.AES(Ks)
             iv = secrets.randbits(128).to_bytes(16,"big")
@@ -49,8 +52,9 @@ class EncryptionService:
         
 
     
-    def encryptKs(self, Ks , PU):
-        pass
+    def encryptKs(self, Ks: int, pub: rsa.PublicKey) -> bytes:
+        return self.rsaSvc.encryptMessage(Ks.to_bytes(16,"big"),pub)
 
-    def decryptKs(self, message , PU):
-        pass
+    def decryptKs(self, encryptedKs: bytes , priv: rsa.PrivateKey) -> int:
+        decryptedKsBytes = self.rsaSvc.decryptMessage(encryptedKs, priv)
+        return int.from_bytes(decryptedKsBytes, "big")

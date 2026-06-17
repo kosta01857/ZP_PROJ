@@ -45,14 +45,14 @@ class RsaService:
             keyBytes = f.read()
         return rsa.PrivateKey.load_pkcs1(keyfile=keyBytes, format="PEM")
     
-    def generateDigitanSignature(self, priv:rsa.PrivateKey, message: str) -> bytes:
-        return rsa.sign(message=message.encode("utf-8"), priv_key=priv, hash_method="SHA-1")
+    def generateDigitanSignature(self, priv:rsa.PrivateKey, message: bytes) -> bytes:
+        return rsa.sign(message, priv_key=priv, hash_method="SHA-1")
 
     
-    def verifyDigitalSignature(self,message: str, signature: bytes, pub: rsa.PublicKey) -> bool:
+    def verifyDigitalSignature(self,message: bytes, signature: bytes, pub: rsa.PublicKey) -> bool:
         try:
             rsa.verify(
-                message.encode("utf-8"),
+                message,
                 signature=signature,
                 pub_key=pub
             )
@@ -60,8 +60,8 @@ class RsaService:
         except:
             return False
     
-    def encryptMessage(self, message:str, pub: rsa.PublicKey) -> bytes:
-        return rsa.encrypt(message.encode("utf-8"), pub)
+    def encryptMessage(self, message:bytes, pub: rsa.PublicKey) -> bytes:
+        return rsa.encrypt(message, pub)
 
     def decryptMessage(self, message:bytes, priv: rsa.PrivateKey) -> bytes:
         return rsa.decrypt(message, priv)
