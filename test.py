@@ -2,6 +2,7 @@ from rsa_service import RsaService
 from main_service import MainService
 from encryption_service import EncryptionService
 from compression_service import CompressionService
+from email_service import EmailService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -75,5 +76,13 @@ def testCompressDecompress():
     decompressedMessage = cdSvc.decompress(compressedMessage)
     assert message == decompressedMessage, "Compression/Decompression doesn't work"
     print("Success")
+def testEmailService():
+    message = "Some mock message".encode()
+    emailSvc = EmailService()
+    messageToRadix = emailSvc.toRadix64(message)
+    messageFromRadix = emailSvc.fromRadix64(messageToRadix)
+    assert messageFromRadix == message, "Radix error"
+    print ("Success")
 
-testCompressDecompress()
+testEmailService()
+
