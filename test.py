@@ -2,6 +2,7 @@ from rsa_service import RsaService
 from main_service import MainService
 from encryption_service import EncryptionService
 from compression_service import CompressionService
+from segmentation_service import SegmentationService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -75,5 +76,14 @@ def testCompressDecompress():
     decompressedMessage = cdSvc.decompress(compressedMessage)
     assert message == decompressedMessage, "Compression/Decompression doesn't work"
     print("Success")
+def testSegmentSvc():
+    import secrets
+    msg = str(secrets.token_bytes(100000))
+    segSvc = SegmentationService()
+    segSvc.split(msg,{})
+    reassembledMsg = segSvc.reassemble({})
+    assert msg == reassembledMsg, "error, segmentation doesnt work"
+    print("success")
 
-testCompressDecompress()
+
+testSegmentSvc()
