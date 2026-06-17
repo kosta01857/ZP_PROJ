@@ -39,3 +39,5 @@ def testRsaEncryption():
     C = rsaSvc.encryptMessage(message=message, pub=pub)
     assert rsaSvc.decryptMessage(C,priv=priv) == message.encode() , "failed"
     print("true")
+def testMessageEncryption():
+    pass
