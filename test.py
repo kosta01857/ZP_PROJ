@@ -1,6 +1,7 @@
 from rsa_service import RsaService
 from main_service import MainService
 from encryption_service import EncryptionService
+from compression_service import CompressionService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -67,4 +68,12 @@ def testEncryptDecryptMessage():
     assert decryptedMessage == message, "Messages do not match, 3DES"
     print("Success")
 
-testEncryptDecryptMessage()
+def testCompressDecompress():
+    message = "Some mock message".encode()
+    cdSvc = CompressionService()
+    compressedMessage = cdSvc.compress(message)
+    decompressedMessage = cdSvc.decompress(compressedMessage)
+    assert message == decompressedMessage, "Compression/Decompression doesn't work"
+    print("Success")
+
+testCompressDecompress()
