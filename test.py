@@ -54,4 +54,17 @@ def testKsEncryption():
     print("success")
 
 
-testKsEncryption()
+def testEncryptDecryptMessage():
+    message = "Some mock message".encode()
+    mainSvc =  MainService()
+    encSvc =  EncryptionService()
+    ks = mainSvc.generateKs()
+    encryptedMessage = encSvc.encryptMessage(message, ks, "AES")
+    decryptedMessage = encSvc.decryptMessage(encryptedMessage,ks, "AES")
+    assert decryptedMessage == message, "Messages do not match, AES"
+    encryptedMessage = encSvc.encryptMessage(message, ks, "3DES")
+    decryptedMessage = encSvc.decryptMessage(encryptedMessage,ks, "3DES")
+    assert decryptedMessage == message, "Messages do not match, 3DES"
+    print("Success")
+
+testEncryptDecryptMessage()

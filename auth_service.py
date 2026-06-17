@@ -10,6 +10,7 @@ class AuthService:
 
     def verify(self, message, signature, key):
         #ovaj treba da bude public
+        pass
         
     
         
