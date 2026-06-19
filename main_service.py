@@ -24,20 +24,20 @@ class MainService:
         pass
 
 
-    def send(self,message, PU, PR):
+    def send(self,message, PU, PR, algorithm):
         signature = self.authService.sign(message, PR)
         signedMessage = message + signature
         compressedMessage = self.compressionService.compress(signedMessage)
         Ks = self.generateKs()
         encryptedKey = self.encryptionService.encryptKs(Ks, PU)
         encryptedMessage = self.encryptionService.encryptMessage(compressedMessage, Ks)
-        radix64Message = self.emailService.toRadix64(encryptedKey + encryptedMessage)
+        radix64Message = self.emailService.toRadix64(encryptedKey + encryptedMessage, algorithm)
         return self.segmentationService.split(radix64Message)
 
 
     def receive(self, encryptedData, PU, PR):
         encryptedData = self.segmentationService.reassemble(encryptedData)
-        encryptedData = self.emailService.fromRadix64(encryptedData)
+        encryptedData, algorithm = self.emailService.fromRadix64(encryptedData)
         encryptedKs, encryptedMessage = self.splitData(encryptedData)
         Ks = self.encryptionService.decryptKs(encryptedKs, PR)
         message = self.encryptionService.decryptMessage(encryptedMessage, Ks)
