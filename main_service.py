@@ -31,27 +31,29 @@ class MainService:
         return message, digest
 
 
-    def send(self,message: bytes, PU: rsa.PublicKey, PR: rsa.PrivateKey, algorithm: str) -> list[str]:
-        signature = self.authService.sign(message, PR)
+    def send(self,message: bytes, receiverPU: rsa.PublicKey,
+              senderPR: rsa.PrivateKey, algorithm: str) -> list[str]:
+        signature = self.authService.sign(message, senderPR)
         signedMessage = message + signature
         compressedMessage = self.compressionService.compress(signedMessage)
         Ks = self.generateKs()
         encryptedMessage = self.encryptionService.encryptMessage(compressedMessage, Ks, algorithm)
-        encryptedKey = self.encryptionService.encryptKs(Ks, PU)
+        encryptedKey = self.encryptionService.encryptKs(Ks, receiverPU)
         radix64Message = self.emailService.toRadix64(encryptedKey + encryptedMessage, algorithm)
         return self.segmentationService.split(radix64Message)
 
 
-    def receive(self, encryptedData: list[str], PU: rsa.PublicKey, PR: rsa.PrivateKey) -> str:
+    def receive(self, encryptedData: list[str], senderPU: rsa.PublicKey,
+                 receiverPR: rsa.PrivateKey) -> str:
         encryptedData = self.segmentationService.reassemble(encryptedData)
         encryptedData, algorithm = self.emailService.fromRadix64(encryptedData)
-        ksSize = rsa.common.byte_size(PR.n)
+        ksSize = rsa.common.byte_size(receiverPR.n)
         encryptedMessage, encryptedKs = self.splitData(encryptedData, ksSize)
-        Ks = self.encryptionService.decryptKs(encryptedKs, PR)
+        Ks = self.encryptionService.decryptKs(encryptedKs, receiverPR)
         message = self.encryptionService.decryptMessage(encryptedMessage, Ks, algorithm)
         decompressedMessage = self.compressionService.decompress(message)
-        message, signature = self.splitMessage(decompressedMessage, rsa.common.byte_size(PU.n))
-        if (not self.authService.verify(message, signature, PU)):
+        message, signature = self.splitMessage(decompressedMessage, rsa.common.byte_size(senderPU.n))
+        if (not self.authService.verify(message, signature, senderPU)):
             print("fail")
         return message
 
