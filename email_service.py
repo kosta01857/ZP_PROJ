@@ -15,7 +15,7 @@ class EmailService:
         algorithmBytes = rawMessage[0]
         algorithm = ""
         message = rawMessage[1:]
-        if algorithmBytes ==  b'\x01':
+        if algorithmBytes ==  1:
             algorithm = "AES"
         else:
             algorithm = "3DES"

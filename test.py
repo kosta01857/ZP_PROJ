@@ -88,7 +88,6 @@ def testSegmentSvc():
     print("success")
 
 
-testSegmentSvc()
 def testEmailService():
     message = "Some mock message".encode()
     emailSvc = EmailService()
@@ -96,5 +95,20 @@ def testEmailService():
     messageFromRadix = emailSvc.fromRadix64(messageToRadix)
     assert messageFromRadix == message, "Radix error"
     print ("Success")
+
+def e2eCoreTest():
+    mainSvc = MainService()
+    rsaSvc = RsaService()
+    priv, pub = rsaSvc.generateKeyPair(2048)
+    message = "Some mock message".encode()
+    chunks = mainSvc.send(message, pub,priv, "AES")
+    receivedeMsg = mainSvc.receive(chunks,pub,priv)
+    print(message)
+    print("========================")
+    print(receivedeMsg)
+    assert receivedeMsg == message, "e2e core test failed, messages do not match"
+    print("success")
+
+e2eCoreTest()
 
 
