@@ -1,6 +1,6 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
-import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa
 import secrets
 from rsa_service import RsaService
 
@@ -57,9 +57,9 @@ class EncryptionService:
         
 
     
-    def encryptKs(self, Ks: int, pub: rsa.PublicKey) -> bytes:
+    def encryptKs(self, Ks: int, pub: rsa.RSAPublicKey) -> bytes:
         return self.rsaSvc.encryptMessage(Ks.to_bytes(16,"big"),pub)
 
-    def decryptKs(self, encryptedKs: bytes , priv: rsa.PrivateKey) -> int:
+    def decryptKs(self, encryptedKs: bytes , priv: rsa.RSAPrivateKey) -> int:
         decryptedKsBytes = self.rsaSvc.decryptMessage(encryptedKs, priv)
         return int.from_bytes(decryptedKsBytes, "big")

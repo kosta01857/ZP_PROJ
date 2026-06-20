@@ -16,16 +16,16 @@ def testPrintRsa():
 def testRsaExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, {})
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test")
 
 def testRsaImportExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, {})
-    privImp = rsaSvc.importPrivateRsaKey("priv.pem")
-    pubImp =  rsaSvc.importPublicRsaKey("pub.pem")
-    assert priv.n == privImp.n, "priv errror"
-    assert pub.n == pubImp.n, "pub errror"
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test")
+    privImp = rsaSvc.importPrivateRsaKey("test_priv.pem", b"password")
+    pubImp = rsaSvc.importPublicRsaKey("test_pub.pem")
+    assert priv.private_numbers().public_numbers.n == privImp.private_numbers().public_numbers.n, "priv errror"
+    assert pub.public_numbers().n == pubImp.public_numbers().n, "pub errror"
     print("success")
 
 
@@ -92,8 +92,8 @@ def testSegmentSvc():
 def testEmailService():
     message = "Some mock message".encode()
     emailSvc = EmailService()
-    messageToRadix = emailSvc.toRadix64(message)
-    messageFromRadix = emailSvc.fromRadix64(messageToRadix)
+    messageToRadix = emailSvc.toRadix64(message, "AES")
+    messageFromRadix, _ = emailSvc.fromRadix64(messageToRadix)
     assert messageFromRadix == message, "Radix error"
     print ("Success")
 
@@ -105,7 +105,15 @@ def e2eCoreTest():
     message = "Some mock message".encode()
     chunks = pgpSvc.pgpEncrypt(message, receiverPub,senderPriv, "AES")
     receivedeMsg = pgpSvc.pgpDecrypt(chunks,senderPub, receiverPriv)
-    assert receivedeMsg == message, "e2e core test failed, messages do not match"
+    assert receivedeMsg == message.decode(), "e2e core test failed, messages do not match"
+    print("success")
+
+def testWrongPassword():
+    rsaSvc = RsaService()
+    priv, pub = rsaSvc.generateKeyPair(2048)
+    rsaSvc.exportKeyPairToPem(pub, priv, b"correct_password", "test")
+    result = rsaSvc.importPrivateRsaKey("test_priv.pem", b"wrong_password")
+    assert result is None, "expected None for wrong password"
     print("success")
 
 def mainSvcTest():
@@ -119,5 +127,9 @@ def mainSvcTest():
     assert receivedMessage == message, "main svc doesnt work, messages dont match"
     print("success")
 
+testRsaImportExport()
+testRsaExport()
+e2eCoreTest()
 mainSvcTest()
+testWrongPassword()
 
