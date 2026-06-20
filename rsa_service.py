@@ -1,67 +1,67 @@
-import rsa
-from domain import User
-
-
-def resolvePrivateKeyFileName(user: User):
-    return "priv.pem"
-
-def resolvePublicKeyFileName(user: User):
-    return "pub.pem"
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
+from cryptography.hazmat.primitives import serialization
 
 class RsaService:
-    def generateKeyPair(self, size) -> tuple[rsa.PrivateKey, rsa.PublicKey]:
-        assert size == 1024 or size == 2048 , 'key size not valid'
-        public, private = rsa.newkeys(nbits=size)
-        return private, public
+    def generateKeyPair(self, size) -> tuple[rsa.RSAPrivateKey,
+                                              rsa.RSAPublicKey]:
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=size)
+        public_key = private_key.public_key()
+        return private_key,public_key
     
-    
-    def exportPublicKeyToPem(self, key: rsa.PublicKey, user: User):
-        keyBytes = key.save_pkcs1(format="PEM")
-        publicFileName = resolvePublicKeyFileName(user)
-        with open(publicFileName, "wb") as f:
+    def exportPublicKeyToPem(self, key: rsa.RSAPublicKey, filename: str):
+        keyBytes = key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        with open(filename + "_pub.pem", "wb") as f:
             f.write(keyBytes)
 
-
-    def exportPrivateKeyToPem(self, key: rsa.PrivateKey, user: User):
-        keyBytes = key.save_pkcs1(format="PEM")
-        privateFileName = resolvePrivateKeyFileName(user)
-        with open(privateFileName, "wb") as f:
+    def exportPrivateKeyToPem(self, key: rsa.RSAPrivateKey,
+                               password: bytes, filename: str):
+        keyBytes = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.BestAvailableEncryption(password)
+        )
+        with open(filename + "_priv.pem", "wb") as f:
             f.write(keyBytes)
 
-    def exportKeyPairToPem(self, pub: rsa.PublicKey,
-                            priv:rsa.PrivateKey, user: User):
-        self.exportPrivateKeyToPem(priv, user) 
-        self.exportPublicKeyToPem(pub, user) 
+    def exportKeyPairToPem(self, pub: rsa.RSAPublicKey,
+                            priv:rsa.RSAPrivateKey, password: bytes, filename: str):
+        self.exportPublicKeyToPem(pub, filename)
+        self.exportPrivateKeyToPem(priv,password, filename)
     
-    def importPublicRsaKey(self, filename: str) -> rsa.PublicKey:
-        keyBytes = bytes()
+    def importPublicRsaKey(self, filename: str) -> rsa.RSAPublicKey:
         with open(filename, "rb") as f:
-            keyBytes = f.read()
-        return rsa.PublicKey.load_pkcs1(keyfile=keyBytes, format="PEM")
+            pemKey = f.read()
+            return load_pem_public_key(pemKey)
 
-    def importPrivateRsaKey(self, filename: str) -> rsa.PrivateKey:
-        keyBytes = bytes()
-        with open(filename, "rb") as f:
-            keyBytes = f.read()
-        return rsa.PrivateKey.load_pkcs1(keyfile=keyBytes, format="PEM")
-    
-    def generateDigitanSignature(self, priv:rsa.PrivateKey, message: bytes) -> bytes:
-        return rsa.sign(message, priv_key=priv, hash_method="SHA-1")
+    def importPrivateRsaKey(self, filename: str, password:bytes) -> rsa.RSAPrivateKey:
+        try: 
+            with open(filename, "rb") as f:
+                pemKey = f.read()
+                return load_pem_private_key(pemKey, password)
+        except:
+            return None
 
+    def generateDigitanSignature(self, priv:rsa.RSAPrivateKey,
+                                  message: bytes) -> bytes:
+        return priv.sign(message, padding.PKCS1v15(), hashes.SHA1())
     
-    def verifyDigitalSignature(self,message: bytes, signature: bytes, pub: rsa.PublicKey) -> bool:
+    def verifyDigitalSignature(self,message: bytes, signature: bytes,
+                                pub: rsa.RSAPublicKey) -> bool:
         try:
-            rsa.verify(
-                message,
-                signature=signature,
-                pub_key=pub
-            )
+            pub.verify(signature, message, padding.PKCS1v15(), hashes.SHA1())
             return True
         except:
             return False
-    
-    def encryptMessage(self, message:bytes, pub: rsa.PublicKey) -> bytes:
-        return rsa.encrypt(message, pub)
 
-    def decryptMessage(self, message:bytes, priv: rsa.PrivateKey) -> bytes:
-        return rsa.decrypt(message, priv)
+    def encryptMessage(self, message:bytes, pub: rsa.RSAPublicKey) -> bytes:
+        return pub.encrypt(message, padding.PKCS1v15())
+
+
+    def decryptMessage(self, message:bytes, priv: rsa.RSAPrivateKey) -> bytes:
+        return priv.decrypt(message, padding.PKCS1v15())

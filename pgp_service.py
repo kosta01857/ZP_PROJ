@@ -4,7 +4,7 @@ from email_service import EmailService
 from encryption_service import EncryptionService
 from segmentation_service import SegmentationService
 import secrets
-import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 class PgpService:
     authService = AuthService()
@@ -30,8 +30,8 @@ class PgpService:
         return message, digest
 
 
-    def pgpEncrypt(self,message: bytes, receiverPU: rsa.PublicKey,
-              senderPR: rsa.PrivateKey, algorithm: str) -> list[str]:
+    def pgpEncrypt(self,message: bytes, receiverPU: rsa.RSAPublicKey,
+              senderPR: rsa.RSAPrivateKey, algorithm: str) -> list[str]:
         signature = self.authService.sign(message, senderPR)
         signedMessage = message + signature
         compressedMessage = self.compressionService.compress(signedMessage)
@@ -42,16 +42,16 @@ class PgpService:
         return self.segmentationService.split(radix64Message)
 
 
-    def pgpDecrypt(self, encryptedData: list[str], senderPU: rsa.PublicKey,
-                 receiverPR: rsa.PrivateKey) -> str:
+    def pgpDecrypt(self, encryptedData: list[str], senderPU: rsa.RSAPublicKey,
+                 receiverPR: rsa.RSAPrivateKey) -> str:
         encryptedData = self.segmentationService.reassemble(encryptedData)
         encryptedData, algorithm = self.emailService.fromRadix64(encryptedData)
-        ksSize = rsa.common.byte_size(receiverPR.n)
+        ksSize = receiverPR.key_size // 8
         encryptedMessage, encryptedKs = self.splitData(encryptedData, ksSize)
         Ks = self.encryptionService.decryptKs(encryptedKs, receiverPR)
         message = self.encryptionService.decryptMessage(encryptedMessage, Ks, algorithm)
         decompressedMessage = self.compressionService.decompress(message)
-        message, signature = self.splitMessage(decompressedMessage, rsa.common.byte_size(senderPU.n))
+        message, signature = self.splitMessage(decompressedMessage, senderPU.key_size // 8)
         if (not self.authService.verify(message, signature, senderPU)):
             print("fail")
         return message.decode()
