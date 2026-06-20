@@ -1,9 +1,10 @@
 from rsa_service import RsaService
-from main_service import MainService
+from pgp_service import PgpService 
 from encryption_service import EncryptionService
 from compression_service import CompressionService
 from segmentation_service import SegmentationService
 from email_service import EmailService
+from main_service import MainService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -46,11 +47,11 @@ def testRsaEncryption():
     print("success")
 
 def testKsEncryption():
-    mainSvc =  MainService()
+    pgpSvc = PgpService()
     encSvc =  EncryptionService()
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    ks = mainSvc.generateKs()
+    ks = pgpSvc.generateKs()
     encKs = encSvc.encryptKs(ks,pub)
     decryptedKs = encSvc.decryptKs(encKs,priv)
     assert ks == decryptedKs , "Ks do not match"
@@ -59,9 +60,9 @@ def testKsEncryption():
 
 def testEncryptDecryptMessage():
     message = "Some mock message".encode()
-    mainSvc =  MainService()
+    pgpSvc =  PgpService()
     encSvc =  EncryptionService()
-    ks = mainSvc.generateKs()
+    ks = pgpSvc.generateKs()
     encryptedMessage = encSvc.encryptMessage(message, ks, "AES")
     decryptedMessage = encSvc.decryptMessage(encryptedMessage,ks, "AES")
     assert decryptedMessage == message, "Messages do not match, AES"
@@ -97,18 +98,26 @@ def testEmailService():
     print ("Success")
 
 def e2eCoreTest():
-    mainSvc = MainService()
+    pgpSvc = PgpService()
     rsaSvc = RsaService()
-    priv, pub = rsaSvc.generateKeyPair(2048)
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     message = "Some mock message".encode()
-    chunks = mainSvc.send(message, pub,priv, "AES")
-    receivedeMsg = mainSvc.receive(chunks,pub,priv)
-    print(message)
-    print("========================")
-    print(receivedeMsg)
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub,senderPriv, "AES")
+    receivedeMsg = pgpSvc.pgpDecrypt(chunks,senderPub, receiverPriv)
     assert receivedeMsg == message, "e2e core test failed, messages do not match"
     print("success")
 
-e2eCoreTest()
+def mainSvcTest():
+    mainSvc = MainService()
+    message = "mock message"
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    mainSvc.send(message,"test_dest",senderPriv, receiverPub, "AES")
+    receivedMessage =mainSvc.receive("test_dest",senderPub, receiverPriv)
+    assert receivedMessage == message, "main svc doesnt work, messages dont match"
+    print("success")
 
+mainSvcTest()
 
