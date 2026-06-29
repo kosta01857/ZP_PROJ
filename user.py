@@ -12,7 +12,6 @@ class User:
 
     
     
-    
     def createFolders(self):
         os.makedirs(self.path, exist_ok=True)
         os.makedirs(os.path.join(self.path, "public_ring"), exist_ok=True)
@@ -24,7 +23,7 @@ class User:
         priv, pub = rsaSvc.generateKeyPair(size)
         filename = f"{uuid.uuid4()}"
         rsaSvc.exportKeyPairToPem(pub,priv,password.encode(),filename)
-      
+    
     
 
     

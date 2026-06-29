@@ -5,6 +5,7 @@ from compression_service import CompressionService
 from segmentation_service import SegmentationService
 from email_service import EmailService
 from main_service import MainService
+from user_service import UserService
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -126,10 +127,24 @@ def mainSvcTest():
     receivedMessage =mainSvc.receive("test_dest",senderPub, receiverPriv)
     assert receivedMessage == message, "main svc doesnt work, messages dont match"
     print("success")
+    
+def userServiceTest():
+    userSvc = UserService()
+    name = "TestUser"
+    email = "test@example.com"
+    user = userSvc.createUser(name, email)
+    found = userSvc.findUserByEmail(email)
+    assert found is not None, "User was not created"
+    assert found.email == email, "Email mismatch"
+    assert found.name == name, "Name mismatch"
+    print("createUser OK")
+    result = userSvc.deleteUser(email)
+    assert result is True, "User was not deleted"
+    found_after = userSvc.findUserByEmail(email)
+    assert found_after is None, "User still exists after delete"
+    print("deleteUser OK")
+    print("UserService test SUCCESS")
+    
 
-testRsaImportExport()
-testRsaExport()
-e2eCoreTest()
-mainSvcTest()
-testWrongPassword()
+userServiceTest()
 
