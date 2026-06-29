@@ -100,20 +100,13 @@ class User:
             json.dump(keys,f,indent=4)
         return pub
     
-    def deleteKeyPair(self, keyId: str) -> bool:
+    def deleteKeyPair(self, keyEntry: dict) -> bool:
+        keyId = keyEntry["keyId"]
+
+        if os.path.exists(keyEntry["pemFile"]):
+            os.remove(keyEntry["pemFile"])
+
         privKeys = self.loadPrivateKeyRing()
-        keyToDel = None
-        for k in privKeys:
-            if k["keyId"] == keyId:
-                keyToDel = k
-                break
-
-        if keyToDel is None:
-            return False
-
-        if os.path.exists(keyToDel["pemFile"]):
-            os.remove(keyToDel["pemFile"])
-
         updatedPrivKeys = []
         for k in privKeys:
             if k["keyId"] != keyId:
