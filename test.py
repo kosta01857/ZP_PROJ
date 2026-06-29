@@ -5,11 +5,8 @@ from compression_service import CompressionService
 from segmentation_service import SegmentationService
 from email_service import EmailService
 from main_service import MainService
-<<<<<<< HEAD
 from user import User
-=======
 from user_service import UserService
->>>>>>> origin/main
 
 def testPrintRsa():
     rsaSvc = RsaService()

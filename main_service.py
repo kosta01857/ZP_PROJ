@@ -1,11 +1,7 @@
 from pgp_service import PgpService
 from rsa_service import RsaService
 from user import User
-<<<<<<< HEAD
 from cryptography.hazmat.primitives.asymmetric import rsa
-=======
-import rsa
->>>>>>> origin/main
 class MainService:
     pgpSvc = PgpService()
     rsaSvc = RsaService()
