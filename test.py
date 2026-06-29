@@ -5,6 +5,7 @@ from compression_service import CompressionService
 from segmentation_service import SegmentationService
 from email_service import EmailService
 from main_service import MainService
+from user import User
 from user_service import UserService
 
 def testPrintRsa():
@@ -146,5 +147,15 @@ def userServiceTest():
     print("UserService test SUCCESS")
     
 
-userServiceTest()
 
+def testUserPrivateKeyRing():
+    user = User("kosta","kosta012001@gmail.com")
+    password = "123"
+    pub,priv = user.newKeyPair(1024,password)
+    ring = user.loadPrivateKeyRing()
+    rsaSvc = RsaService()
+    private_key = ring[0]
+    key_filename = private_key["pem_file"]
+    importedPriv = rsaSvc.importPrivateRsaKey(key_filename,password.encode())
+    assert importedPriv.private_numbers().d == priv.private_numbers().d, "failed , keys do not match"
+    print("success")

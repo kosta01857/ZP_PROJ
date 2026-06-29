@@ -16,7 +16,7 @@ class RsaService:
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
-        with open(filename + "_pub.pem", "wb") as f:
+        with open(filename, "wb") as f:
             f.write(keyBytes)
 
     def exportPrivateKeyToPem(self, key: rsa.RSAPrivateKey,
@@ -26,7 +26,7 @@ class RsaService:
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.BestAvailableEncryption(password)
         )
-        with open(filename + "_priv.pem", "wb") as f:
+        with open(filename, "wb") as f:
             f.write(keyBytes)
 
     def exportKeyPairToPem(self, pub: rsa.RSAPublicKey,
