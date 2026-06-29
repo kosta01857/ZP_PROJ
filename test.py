@@ -5,7 +5,11 @@ from compression_service import CompressionService
 from segmentation_service import SegmentationService
 from email_service import EmailService
 from main_service import MainService
+<<<<<<< HEAD
 from user import User
+=======
+from user_service import UserService
+>>>>>>> origin/main
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -127,6 +131,24 @@ def mainSvcTest():
     receivedMessage =mainSvc.receive("test_dest",senderPub, receiverPriv)
     assert receivedMessage == message, "main svc doesnt work, messages dont match"
     print("success")
+    
+def userServiceTest():
+    userSvc = UserService()
+    name = "TestUser"
+    email = "test@example.com"
+    user = userSvc.createUser(name, email)
+    found = userSvc.findUserByEmail(email)
+    assert found is not None, "User was not created"
+    assert found.email == email, "Email mismatch"
+    assert found.name == name, "Name mismatch"
+    print("createUser OK")
+    result = userSvc.deleteUser(email)
+    assert result is True, "User was not deleted"
+    found_after = userSvc.findUserByEmail(email)
+    assert found_after is None, "User still exists after delete"
+    print("deleteUser OK")
+    print("UserService test SUCCESS")
+    
 
 
 def testUserPrivateKeyRing():
@@ -137,14 +159,6 @@ def testUserPrivateKeyRing():
     rsaSvc = RsaService()
     private_key = ring[0]
     key_filename = private_key["pem_file"]
-    print(key_filename)
     importedPriv = rsaSvc.importPrivateRsaKey(key_filename,password.encode())
-    print(importedPriv.private_numbers().d)
-    print("===")
-    print(priv.private_numbers().d)
     assert importedPriv.private_numbers().d == priv.private_numbers().d, "failed , keys do not match"
     print("success")
-
-testUserPrivateKeyRing()
-
-
