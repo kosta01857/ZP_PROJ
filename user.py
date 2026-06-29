@@ -137,3 +137,42 @@ class User:
             json.dump(updatedPubKeys, f, indent=4)
 
         return True
+    
+    def getPublicKey(self, keyId: str):
+        keys = self.loadPublicKeyRing()
+        for k in keys:
+            if k["keyId"] == keyId:
+                return self.rsaSvc.importPublicRsaKey(k["pemFile"])
+
+        return None
+    
+    def getPrivateKey(self, keyId: str, password: bytes):
+        keys = self.loadPrivateKeyRing()
+        for k in keys:
+            if k["keyId"] == keyId:
+                return self.rsaSvc.importPrivateRsaKey(k["pemFile"], password)
+
+        return None
+    
+    def exportPublicKey(self, keyId: str, destPath: str):
+        keys = self.loadPublicKeyRing()
+        for k in keys:
+            if k["keyId"] == keyId:
+                pub = self.rsaSvc.importPublicRsaKey(k["pemFile"])
+                self.rsaSvc.exportPublicKeyToPem(pub, destPath)
+                return True
+
+        return False
+    
+    def exportPrivateKey(self, keyId: str, password: bytes, destPath: str):
+        keys = self.loadPrivateKeyRing()
+        for k in keys:
+            if k["keyId"] == keyId:
+                priv = self.rsaSvc.importPrivateRsaKey(k["pemFile"], password)
+                if priv is None:
+                    return False
+
+                self.rsaSvc.exportPrivateKeyToPem(priv, password, destPath)
+                return True
+
+        return False
