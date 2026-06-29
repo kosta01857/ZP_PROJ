@@ -1,4 +1,4 @@
-from domain import User
+from user import User
 class SegmentationService:
 
     def split(self, message: str) -> list[str]:

@@ -1,6 +1,6 @@
 from pgp_service import PgpService
 from rsa_service import RsaService
-from domain import User
+from user import User
 import rsa
 class MainService:
     pgpSvc = PgpService()
