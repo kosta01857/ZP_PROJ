@@ -17,7 +17,6 @@ class SegmentationService:
            message = "" 
            for chunk in chunks:
                 message += chunk
-           message.replace("\n","")
            return message
 
 

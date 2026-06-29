@@ -4,6 +4,7 @@ import uuid
 import hashlib
 from pathlib import Path
 import json
+from datetime import datetime
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -52,9 +53,11 @@ class User:
         filenamePub = os.path.join(self.privateKeyRingPath,f"{fileUuid}_pub.pem")
         self.rsaSvc.exportPrivateKeyToPem(priv,password.encode(),filename)
         self.rsaSvc.exportPublicKeyToPem(pub,filenamePub)
+        timestamp = datetime.now().isoformat()
         privateKey = {
             "keyId" : keyId,
             "keySize": size,
+            "timestamp": timestamp,
             "pemFile" : filename
         }
         publicKey = {
@@ -62,6 +65,7 @@ class User:
             "name": self.name,
             "email" : self.email,
             "keySize": pub.key_size,
+            "timestamp": timestamp,
             "pemFile" : filenamePub
         }
         keys = self.loadPrivateKeyRing()
@@ -92,6 +96,7 @@ class User:
             "name": username,
             "email" : email,
             "keySize": pub.key_size,
+            "timestamp": datetime.now().isoformat(),
             "pemFile" : destFilename
         }
         keys = self.loadPublicKeyRing()

@@ -85,8 +85,8 @@ def testSegmentSvc():
     import secrets
     msg = str(secrets.token_bytes(100000))
     segSvc = SegmentationService()
-    segSvc.split(msg,{})
-    reassembledMsg = segSvc.reassemble({})
+    chunks = segSvc.split(msg)
+    reassembledMsg = segSvc.reassemble(chunks)
     assert msg == reassembledMsg, "error, segmentation doesnt work"
     print("success")
 
@@ -190,6 +190,3 @@ def testDeleteKeyPair():
         assert k["keyId"] != keyId, "key not deleted"
 
     print("delete success")
-
-testUserPublicKeyRing()
-testDeleteKeyPair()

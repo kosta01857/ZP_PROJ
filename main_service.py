@@ -21,9 +21,3 @@ class MainService:
             encryptedData = f.read().split('\n')
         message = self.pgpSvc.pgpDecrypt(encryptedData,senderPub,receiverPriv)
         return message
-            
-
-
-    def generateKeyPair(self, user: User, keySize: int) -> tuple[rsa.RSAPublicKey, rsa.RSAPrivateKey]:
-        priv, pub = self.rsaSvc.generateKeyPair(keySize)
-        return pub,priv

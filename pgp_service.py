@@ -5,6 +5,7 @@ from encryption_service import EncryptionService
 from segmentation_service import SegmentationService
 import secrets
 from cryptography.hazmat.primitives.asymmetric import rsa
+from exception import SignatureVerificationError
 
 class PgpService:
     authService = AuthService()
@@ -53,7 +54,8 @@ class PgpService:
         decompressedMessage = self.compressionService.decompress(message)
         message, signature = self.splitMessage(decompressedMessage, senderPU.key_size // 8)
         if (not self.authService.verify(message, signature, senderPU)):
-            print("fail")
+            raise SignatureVerificationError("Signature verification failed")
+
         return message.decode()
 
 
