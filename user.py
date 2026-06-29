@@ -38,7 +38,7 @@ class User:
     def loadPrivateKeyRing(self) -> list[dict]:
         with open(self.privateJson, "r") as f:
             return json.load(f)
-
+    
     def loadPublicKeyRing(self) -> list[dict]:
         with open(self.publicJson, "r") as f:
             return json.load(f)
@@ -77,7 +77,6 @@ class User:
 
       
     def _initialize_json_file(self, filePath: Path):
-            """Initializes a file with an empty JSON array if it's new/empty."""
             if not filePath.exists() or filePath.stat().st_size == 0:
                 with open(filePath, "w", encoding="utf-8") as f:
                     json.dump([], f) 
@@ -100,3 +99,43 @@ class User:
         with open(self.publicJson, "w") as f:
             json.dump(keys,f,indent=4)
         return pub
+    
+    def deleteKeyPair(self, keyId: str) -> bool:
+        privKeys = self.loadPrivateKeyRing()
+        keyToDel = None
+        for k in privKeys:
+            if k["keyId"] == keyId:
+                keyToDel = k
+                break
+
+        if keyToDel is None:
+            return False
+
+        if os.path.exists(keyToDel["pemFile"]):
+            os.remove(keyToDel["pemFile"])
+
+        updatedPrivKeys = []
+        for k in privKeys:
+            if k["keyId"] != keyId:
+                updatedPrivKeys.append(k)
+        with open(self.privateJson, "w") as f:
+            json.dump(updatedPrivKeys, f, indent=4)
+
+        pubKeys = self.loadPublicKeyRing()
+        pubKeyToDel = None
+        for k in pubKeys:
+            if k["keyId"] == keyId:
+                pubKeyToDel = k
+                break
+
+        if pubKeyToDel is not None and os.path.exists(pubKeyToDel["pemFile"]):
+            os.remove(pubKeyToDel["pemFile"])
+
+        updatedPubKeys = []
+        for k in pubKeys:
+            if k["keyId"] != keyId:
+                updatedPubKeys.append(k)
+        with open(self.publicJson, "w") as f:
+            json.dump(updatedPubKeys, f, indent=4)
+
+        return True
