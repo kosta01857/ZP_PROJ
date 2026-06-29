@@ -31,6 +31,10 @@ class User:
     def loadPrivateKeyRing(self) -> list[dict]:
         with open(self.privateJson, "r") as f:
             return json.load(f)
+    
+    def loadPublicKeyRing(self) -> list[dict]:
+        with open(self.publicJson, "r") as f:
+            return json.load(f)
 
     
     def newKeyPair(self, size:int, password:str) -> tuple[rsa.RSAPublicKey,rsa.RSAPrivateKey]:
@@ -39,20 +43,75 @@ class User:
         keyId = uuid.uuid4()
         filename = os.path.join(self.privateKeyRingPath,f"{keyId}.pem")
         rsaSvc.exportPrivateKeyToPem(priv,password.encode(),filename)
+        rsaSvc.exportPublicKeyToPem(pub,filename)
         privateKey = {
-            "key_id" : f"{keyId}",
-            "key_size": size,
-            "pem_file" : filename
+            "keyID" : f"{keyId}",
+            "keySize": size,
+            "pemFile" : filename
+        }
+        publicKey = {
+            "keyID": f"{keyId}",
+            "name": self.name,
+            "email": self.email,
+            "keySize": size
         }
         keys = self.loadPrivateKeyRing()
         keys.append(privateKey)
         with open(self.privateJson, "w") as f:
             json.dump(keys,f,indent=4)
+
+        pubKeys = []
+
+        if os.path.exists(self.publicJson):
+            with open(self.publicJson, "r") as f:
+                pubKeys = json.load(f)
+
+        pubKeys.append(publicKey)
+
+        with open(self.publicJson, "w") as f:
+            json.dump(pubKeys, f, indent=4)
+
         return pub,priv
 
       
     def _initialize_json_file(self, filePath: Path):
-            """Initializes a file with an empty JSON array if it's new/empty."""
             if not filePath.exists() or filePath.stat().st_size == 0:
                 with open(filePath, "w", encoding="utf-8") as f:
                     json.dump([], f) 
+    
+    def deleteKeyPair(self, keyID: str) -> bool:
+        privKeys = self.loadPrivateKeyRing()
+        keyToDel = None
+        for key in privKeys:
+            if key["keyID"] == keyID:
+                keyToDel = key
+                break
+
+        if keyToDel is None: return False
+        pemPath = keyToDel["pemFile"]
+        if os.path.exists(pemPath):
+            os.remove(pemPath)
+
+        newList = []
+        for k in privKeys:
+            if k["keyID"] != keyID:
+                newList.append(k)
+        privKeys = newList
+
+        with open(self.privateJson, "w") as f:
+            json.dump(privKeys, f, indent=4)
+
+        if os.path.exists(self.publicJson):
+            with open(self.publicJson, "r") as f:
+                pubKeys = json.load(f)
+
+            newList = []
+            for k in pubKeys:
+                if k["keyID"] != keyID:
+                    newList.append(k)
+            pubKeys = newList
+
+            with open(self.publicJson, "w") as f:
+                json.dump(pubKeys, f, indent=4)
+
+        return True

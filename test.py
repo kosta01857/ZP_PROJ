@@ -131,20 +131,20 @@ def mainSvcTest():
     
 def userServiceTest():
     userSvc = UserService()
-    name = "TestUser"
-    email = "test@example.com"
+    name = "Anja"
+    email = "Anja@egmail.com"
     user = userSvc.createUser(name, email)
     found = userSvc.findUserByEmail(email)
     assert found is not None, "User was not created"
-    assert found.email == email, "Email mismatch"
-    assert found.name == name, "Name mismatch"
-    print("createUser OK")
+    assert found.email == email, "Email doesn't match"
+    assert found.name == name, "Name doesn't match"
+    print("createUser ok")
     result = userSvc.deleteUser(email)
     assert result is True, "User was not deleted"
     found_after = userSvc.findUserByEmail(email)
     assert found_after is None, "User still exists after delete"
-    print("deleteUser OK")
-    print("UserService test SUCCESS")
+    print("deleteUser ok")
+    print("success")
     
 
 
@@ -155,7 +155,41 @@ def testUserPrivateKeyRing():
     ring = user.loadPrivateKeyRing()
     rsaSvc = RsaService()
     private_key = ring[0]
-    key_filename = private_key["pem_file"]
+    key_filename = private_key["pemFile"]
     importedPriv = rsaSvc.importPrivateRsaKey(key_filename,password.encode())
     assert importedPriv.private_numbers().d == priv.private_numbers().d, "failed , keys do not match"
     print("success")
+
+def testUserPublicKeyRing():
+    user = User("ana", "ana@gmail.com")
+    password = "123"
+    pub, priv = user.newKeyPair(1024, password)
+    pubRing = user.loadPublicKeyRing()
+
+    assert len(pubRing) > 0, "public key ring is empty"
+
+    publiKey = pubRing[0]
+    assert publiKey["email"] == "ana@gmail.com", "email doesn't match"
+    assert publiKey["name"] == "ana", "name doesn't match"
+    assert publiKey["keySize"] == 1024, "key size mismatch"
+
+    print("user public key success")
+
+def testDeleteKeyPair():
+    user = User("ogi", "ogi@gmail.com")
+    password = "123"
+    pub, priv = user.newKeyPair(1024, password)
+    ring = user.loadPrivateKeyRing()
+    assert len(ring) > 0, "key was not created"
+    keyID = ring[0]["keyID"]
+
+    result = user.deleteKeyPair(keyID)
+    assert result == True, "delete failed"
+    ring_after = user.loadPrivateKeyRing()
+
+    for k in ring_after:
+        assert k["keyID"] != keyID, "key not deleted"
+
+    print("delete success")
+
+testUserPrivateKeyRing()
