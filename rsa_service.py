@@ -30,9 +30,9 @@ class RsaService:
             f.write(keyBytes)
 
     def exportKeyPairToPem(self, pub: rsa.RSAPublicKey,
-                            priv:rsa.RSAPrivateKey, password: bytes, filename: str):
-        self.exportPublicKeyToPem(pub, filename)
-        self.exportPrivateKeyToPem(priv,password, filename)
+                            priv:rsa.RSAPrivateKey, password: bytes, filenamePub: str, filenamePriv: str):
+        self.exportPublicKeyToPem(pub, filenamePub)
+        self.exportPrivateKeyToPem(priv,password, filenamePriv)
     
     def importPublicRsaKey(self, filename: str) -> rsa.RSAPublicKey:
         with open(filename, "rb") as f:

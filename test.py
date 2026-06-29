@@ -18,12 +18,12 @@ def testPrintRsa():
 def testRsaExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "testPub", "testPriv")
 
 def testRsaImportExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "testPub", "testPriv")
     privImp = rsaSvc.importPrivateRsaKey("test_priv.pem", b"password")
     pubImp = rsaSvc.importPublicRsaKey("test_pub.pem")
     assert priv.private_numbers().public_numbers.n == privImp.private_numbers().public_numbers.n, "priv errror"
@@ -113,7 +113,7 @@ def e2eCoreTest():
 def testWrongPassword():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"correct_password", "test")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"correct_password", "testPub", "testPriv")
     result = rsaSvc.importPrivateRsaKey("test_priv.pem", b"wrong_password")
     assert result is None, "expected None for wrong password"
     print("success")
