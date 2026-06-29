@@ -172,7 +172,6 @@ def testUserPublicKeyRing():
     assert publiKey["email"] == "ana@gmail.com", "email doesn't match"
     assert publiKey["name"] == "ana", "name doesn't match"
     assert publiKey["keySize"] == 1024, "key size mismatch"
-
     print("user public key success")
 
 def testDeleteKeyPair():
@@ -181,15 +180,16 @@ def testDeleteKeyPair():
     pub, priv = user.newKeyPair(1024, password)
     ring = user.loadPrivateKeyRing()
     assert len(ring) > 0, "key was not created"
-    keyID = ring[0]["keyID"]
+    keyId = ring[0]["keyId"]
 
-    result = user.deleteKeyPair(keyID)
+    result = user.deleteKeyPair(keyId)
     assert result == True, "delete failed"
     ring_after = user.loadPrivateKeyRing()
 
     for k in ring_after:
-        assert k["keyID"] != keyID, "key not deleted"
+        assert k["keyId"] != keyId, "key not deleted"
 
     print("delete success")
 
-testUserPrivateKeyRing()
+testUserPublicKeyRing()
+testDeleteKeyPair()
