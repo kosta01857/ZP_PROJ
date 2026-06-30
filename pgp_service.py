@@ -14,8 +14,8 @@ class PgpService:
     encryptionService = EncryptionService()
     segmentationService = SegmentationService()
 
-    def generateKs(self) -> int:
-        return secrets.randbits(128)
+    def generateKs(self) -> bytes:
+        return secrets.token_bytes(16)
 
 
     def splitData(self, data: bytes, ksSize) -> tuple[bytes,bytes]:

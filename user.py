@@ -50,7 +50,7 @@ class User:
         keyId = self._deriveKeyId(pub)
         fileUuid = uuid.uuid4()
         filename = os.path.join(self.privateKeyRingPath,f"{fileUuid}.pem")
-        filenamePub = os.path.join(self.privateKeyRingPath,f"{fileUuid}_pub.pem")
+        filenamePub = os.path.join(self.publicKeyRingPath,f"{fileUuid}_pub.pem")
         self.rsaSvc.exportPrivateKeyToPem(priv,password.encode(),filename)
         self.rsaSvc.exportPublicKeyToPem(pub,filenamePub)
         timestamp = datetime.now().isoformat()
