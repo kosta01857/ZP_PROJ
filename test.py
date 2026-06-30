@@ -296,6 +296,31 @@ def testMixedKeySizes():
     print("success")
 
 
+def _roundtrip(options: SendOptions):
+    pgpSvc = PgpService()
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(1024)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(1024)
+    message = "Options roundtrip test".encode()
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, options)
+    received = pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], senderPub, receiverPriv)
+    assert received == message.decode(), f"roundtrip failed for {options.__dict__}"
+
+
+def testAllOptionCombinations():
+    """Test every combination of sign/encrypt/compress/radix64 with both algorithms."""
+    from itertools import product
+    for sign, encrypt, compress, radix64 in product([True, False], repeat=4):
+        algorithms = ["AES", "3DES"] if encrypt else ["AES"]
+        for algorithm in algorithms:
+            _roundtrip(SendOptions(
+                sign=sign, encrypt=encrypt,
+                compress=compress, radix64=radix64,
+                algorithm=algorithm,
+            ))
+    print("success")
+
+
 if __name__ == "__main__":
     tests = [
         ("testPrintRsa",           testPrintRsa),
@@ -321,6 +346,7 @@ if __name__ == "__main__":
         ("testDuplicateKeyImport", testDuplicateKeyImport),
         ("testE2E3DES",            testE2E3DES),
         ("testMixedKeySizes",      testMixedKeySizes),
+        ("testAllOptionCombinations", testAllOptionCombinations),
     ]
 
     passed = 0

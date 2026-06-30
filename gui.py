@@ -4,12 +4,13 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QTextEdit, QTableWidget, QTableWidgetItem,
     QFileDialog, QDialog, QDialogButtonBox, QComboBox, QFormLayout, QMessageBox,
-    QGroupBox, QSplitter, QHeaderView,
+    QGroupBox, QSplitter, QHeaderView, QCheckBox,
 )
 from PyQt6.QtCore import Qt
 
 from user_service import UserService
 from main_service import MainService
+from send_options import SendOptions
 from exception import SignatureVerificationError
 
 
@@ -359,26 +360,50 @@ class SendTab(QWidget):
         msg_layout.addWidget(self.message_edit)
         layout.addWidget(msg_group)
 
+        # Options
+        opt_group = QGroupBox("Options")
+        opt_layout = QHBoxLayout(opt_group)
+        self.sign_check = QCheckBox("Sign")
+        self.sign_check.setChecked(True)
+        self.encrypt_check = QCheckBox("Encrypt")
+        self.encrypt_check.setChecked(True)
+        self.compress_check = QCheckBox("Compress")
+        self.compress_check.setChecked(True)
+        self.radix64_check = QCheckBox("Radix-64")
+        self.radix64_check.setChecked(True)
+        self.algo_combo = QComboBox()
+        self.algo_combo.addItems(["AES", "3DES"])
+        opt_layout.addWidget(self.sign_check)
+        opt_layout.addWidget(self.encrypt_check)
+        opt_layout.addWidget(self.compress_check)
+        opt_layout.addWidget(self.radix64_check)
+        opt_layout.addSpacing(16)
+        opt_layout.addWidget(QLabel("Algorithm:"))
+        opt_layout.addWidget(self.algo_combo)
+        opt_layout.addStretch()
+        layout.addWidget(opt_group)
+
         keys_row = QHBoxLayout()
 
-        sign_group = QGroupBox("Sign with (Private Key)")
-        sign_layout = QFormLayout(sign_group)
+        self.sign_group = QGroupBox("Sign with (Private Key)")
+        sign_layout = QFormLayout(self.sign_group)
         self.sign_key_combo = QComboBox()
         self.sign_password_edit = QLineEdit()
         self.sign_password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.sign_password_edit.setPlaceholderText("Password for private key")
         sign_layout.addRow("Key:", self.sign_key_combo)
         sign_layout.addRow("Password:", self.sign_password_edit)
-        keys_row.addWidget(sign_group)
+        keys_row.addWidget(self.sign_group)
 
-        enc_group = QGroupBox("Encrypt for (Public Key)")
-        enc_layout = QFormLayout(enc_group)
+        self.enc_group = QGroupBox("Encrypt for (Public Key)")
+        enc_layout = QFormLayout(self.enc_group)
         self.enc_key_combo = QComboBox()
-        self.algo_combo = QComboBox()
-        self.algo_combo.addItems(["AES", "3DES"])
         enc_layout.addRow("Recipient key:", self.enc_key_combo)
-        enc_layout.addRow("Algorithm:", self.algo_combo)
-        keys_row.addWidget(enc_group)
+        keys_row.addWidget(self.enc_group)
+
+        self.sign_check.toggled.connect(self.sign_group.setEnabled)
+        self.encrypt_check.toggled.connect(self.enc_group.setEnabled)
+        self.encrypt_check.toggled.connect(self.algo_combo.setEnabled)
 
         layout.addLayout(keys_row)
 
@@ -423,37 +448,50 @@ class SendTab(QWidget):
         if not self.message_edit.toPlainText():
             QMessageBox.warning(self, "Error", "Message cannot be empty.")
             return
-        if self.sign_key_combo.count() == 0:
-            QMessageBox.warning(self, "Error", "No private keys available for signing.")
-            return
-        if self.enc_key_combo.count() == 0:
-            QMessageBox.warning(self, "Error", "No public keys available for encryption.")
-            return
         dest = self.dest_edit.text()
         if not dest:
             QMessageBox.warning(self, "Error", "Choose a destination file.")
             return
 
-        sign_key_id = self.sign_key_combo.currentData()
-        enc_key_id = self.enc_key_combo.currentData()
-        algorithm = self.algo_combo.currentText()
+        opt = SendOptions(
+            sign=self.sign_check.isChecked(),
+            encrypt=self.encrypt_check.isChecked(),
+            compress=self.compress_check.isChecked(),
+            radix64=self.radix64_check.isChecked(),
+            algorithm=self.algo_combo.currentText(),
+        )
 
-        self.mw.log(f"SEND  user={user.name}  sign_key={sign_key_id}  enc_key={enc_key_id}  algo={algorithm}  dest={dest}")
+        self.mw.log(
+            f"SEND  user={user.name}  sign={opt.sign}  encrypt={opt.encrypt}"
+            f"  compress={opt.compress}  radix64={opt.radix64}  algo={opt.algorithm}  dest={dest}"
+        )
 
-        password = self.sign_password_edit.text()
-        priv_key = user.getPrivateKey(sign_key_id, password.encode())
-        if priv_key is None:
-            self.mw.log(f"ERROR: failed to load private key {sign_key_id} (wrong password?)")
-            QMessageBox.critical(self, "Error", "Failed to load private key. Wrong password?")
-            return
-        self.mw.log(f"  signing key loaded  key_size={priv_key.key_size}")
+        priv_key = None
+        if opt.sign:
+            if self.sign_key_combo.count() == 0:
+                QMessageBox.warning(self, "Error", "No private keys available for signing.")
+                return
+            sign_key_id = self.sign_key_combo.currentData()
+            password = self.sign_password_edit.text()
+            priv_key = user.getPrivateKey(sign_key_id, password.encode())
+            if priv_key is None:
+                self.mw.log(f"ERROR: failed to load private key {sign_key_id} (wrong password?)")
+                QMessageBox.critical(self, "Error", "Failed to load private key. Wrong password?")
+                return
+            self.mw.log(f"  signing key loaded  key_id={sign_key_id}  key_size={priv_key.key_size}")
 
-        pub_key = user.getPublicKey(enc_key_id)
-        if pub_key is None:
-            self.mw.log(f"ERROR: failed to load public key {enc_key_id}")
-            QMessageBox.critical(self, "Error", "Failed to load recipient's public key.")
-            return
-        self.mw.log(f"  encryption key loaded  key_size={pub_key.key_size}")
+        pub_key = None
+        if opt.encrypt:
+            if self.enc_key_combo.count() == 0:
+                QMessageBox.warning(self, "Error", "No public keys available for encryption.")
+                return
+            enc_key_id = self.enc_key_combo.currentData()
+            pub_key = user.getPublicKey(enc_key_id)
+            if pub_key is None:
+                self.mw.log(f"ERROR: failed to load public key {enc_key_id}")
+                QMessageBox.critical(self, "Error", "Failed to load recipient's public key.")
+                return
+            self.mw.log(f"  encryption key loaded  key_id={enc_key_id}  key_size={pub_key.key_size}")
 
         try:
             self.mw.main_svc.send(
@@ -461,7 +499,7 @@ class SendTab(QWidget):
                 dest,
                 priv_key,
                 pub_key,
-                algorithm,
+                opt,
             )
             self.mw.log(f"  OK — message written to {dest}")
             QMessageBox.information(self, "Success", f"Message saved to:\n{dest}")
