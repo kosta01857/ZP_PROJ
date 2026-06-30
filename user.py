@@ -86,8 +86,11 @@ class User:
                     json.dump([], f) 
 
     def importPublicKey(self, username: str, email:str, filename:str) -> rsa.RSAPublicKey:
-        pub =  self.rsaSvc.importPublicRsaKey(filename)
+        pub = self.rsaSvc.importPublicRsaKey(filename)
         keyId = self._deriveKeyId(pub)
+        keys = self.loadPublicKeyRing()
+        if any(k["keyId"] == keyId for k in keys):
+            raise ValueError(f"Public key {keyId} is already in the ring.")
         fileUuid = uuid.uuid4()
         destFilename = os.path.join(self.publicKeyRingPath,f"{fileUuid}.pem")
         self.rsaSvc.exportPublicKeyToPem(pub, destFilename)
@@ -99,7 +102,6 @@ class User:
             "timestamp": datetime.now().isoformat(),
             "pemFile" : destFilename
         }
-        keys = self.loadPublicKeyRing()
         keys.append(publicKey)
         with open(self.publicJson, "w") as f:
             json.dump(keys,f,indent=4)

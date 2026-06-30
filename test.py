@@ -1,5 +1,5 @@
 from rsa_service import RsaService
-from pgp_service import PgpService 
+from pgp_service import PgpService
 from encryption_service import EncryptionService
 from compression_service import CompressionService
 from segmentation_service import SegmentationService
@@ -7,6 +7,8 @@ from email_service import EmailService
 from main_service import MainService
 from user import User
 from user_service import UserService
+from exception import SignatureVerificationError
+import os
 
 def testPrintRsa():
     rsaSvc = RsaService()
@@ -192,6 +194,107 @@ def testDeleteKeyPair():
     print("delete success")
 
 
+def testWrongDecryptionKey():
+    """Decrypting with the wrong private key should raise ValueError, not crash."""
+    pgpSvc = PgpService()
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    wrongPriv, _ = rsaSvc.generateKeyPair(2048)
+
+    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, "AES")
+    try:
+        pgpSvc.pgpDecrypt(chunks, senderPub, wrongPriv)
+        assert False, "expected ValueError but no exception was raised"
+    except ValueError:
+        print("success")
+
+
+def testWrongSenderKey():
+    """Verifying with the wrong sender public key should raise SignatureVerificationError."""
+    pgpSvc = PgpService()
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    _, wrongPub = rsaSvc.generateKeyPair(2048)
+
+    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, "AES")
+    try:
+        pgpSvc.pgpDecrypt(chunks, wrongPub, receiverPriv)
+        assert False, "expected SignatureVerificationError but no exception was raised"
+    except SignatureVerificationError:
+        print("success")
+
+
+def testTamperedMessage():
+    """Any modification to the message file should be detected."""
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    mainSvc = MainService()
+
+    mainSvc.send("original", "test_tampered_msg", senderPriv, receiverPub, "AES")
+
+    with open("test_tampered_msg", "r") as f:
+        data = f.read()
+    mid = len(data) // 2
+    tampered = data[:mid] + ("B" if data[mid] != "B" else "C") + data[mid + 1:]
+    with open("test_tampered_msg", "w") as f:
+        f.write(tampered)
+
+    try:
+        mainSvc.receive("test_tampered_msg", senderPub, receiverPriv)
+        assert False, "expected exception for tampered message but none raised"
+    except Exception:
+        print("success")
+    finally:
+        os.remove("test_tampered_msg")
+
+
+def testDuplicateKeyImport():
+    """Importing the same public key twice should raise ValueError on the second import."""
+    rsaSvc = RsaService()
+    _, pub = rsaSvc.generateKeyPair(1024)
+    rsaSvc.exportPublicKeyToPem(pub, "test_pub_dup.pem")
+
+    user = User("duptest", "duptest@test.com")
+    user.importPublicKey("Alice", "alice@test.com", "test_pub_dup.pem")
+    try:
+        user.importPublicKey("Alice", "alice@test.com", "test_pub_dup.pem")
+        assert False, "expected ValueError on duplicate import but none raised"
+    except ValueError:
+        pass
+
+    os.remove("test_pub_dup.pem")
+    print("success")
+
+
+def testE2E3DES():
+    """End-to-end encrypt/decrypt using 3DES."""
+    pgpSvc = PgpService()
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    message = "Some mock message".encode()
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, "3DES")
+    received = pgpSvc.pgpDecrypt(chunks, senderPub, receiverPriv)
+    assert received == message.decode(), "3DES e2e failed: messages do not match"
+    print("success")
+
+
+def testMixedKeySizes():
+    """Sign with 1024-bit key, encrypt for 2048-bit key — different signature size."""
+    pgpSvc = PgpService()
+    rsaSvc = RsaService()
+    senderPriv, senderPub = rsaSvc.generateKeyPair(1024)
+    receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
+    message = "Mixed key size test".encode()
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, "AES")
+    received = pgpSvc.pgpDecrypt(chunks, senderPub, receiverPriv)
+    assert received == message.decode(), "mixed key size e2e failed"
+    print("success")
+
+
 if __name__ == "__main__":
     tests = [
         ("testPrintRsa",           testPrintRsa),
@@ -211,6 +314,12 @@ if __name__ == "__main__":
         ("testUserPrivateKeyRing", testUserPrivateKeyRing),
         ("testUserPublicKeyRing",  testUserPublicKeyRing),
         ("testDeleteKeyPair",      testDeleteKeyPair),
+        ("testWrongDecryptionKey", testWrongDecryptionKey),
+        ("testWrongSenderKey",     testWrongSenderKey),
+        ("testTamperedMessage",    testTamperedMessage),
+        ("testDuplicateKeyImport", testDuplicateKeyImport),
+        ("testE2E3DES",            testE2E3DES),
+        ("testMixedKeySizes",      testMixedKeySizes),
     ]
 
     passed = 0
