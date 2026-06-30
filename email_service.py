@@ -1,24 +1,49 @@
 import base64
+from send_options import SendOptions
 
 class EmailService:
-    def toRadix64(self, message: bytes, algorithm: str)-> str:
-        algorithmByte = (
-            b'\x01'
-            if algorithm == "AES"
-            else b'\x02'
-        )
-        return base64.b64encode(algorithmByte + message).decode("ascii")
-
-    def fromRadix64(self, message:str)-> tuple[bytes,str]:
-
-        rawMessage = base64.b64decode(message.encode("ascii"))
-        algorithmBytes = rawMessage[0]
-        algorithm = ""
-        message = rawMessage[1:]
-        if algorithmBytes ==  1:
-            algorithm = "AES"
-        else:
-            algorithm = "3DES"
+    def decodeFlags(self,flags_bytes: bytes):
         
-        return  message, algorithm 
+        flags = flags_bytes[0]
+        encrypt = bool(flags & (1 << 0))
+        sign = bool(flags & (1 << 1))
+        compress = bool(flags & (1 << 2))
+        radix64 = bool(flags & (1 << 3))
+        algorithm = "AES" if (flags & (1 << 4)) else "3DES"
+
+        return SendOptions(encrypt, sign, compress, radix64, algorithm)
+
+    def encodeFlags(self, opt: SendOptions):
+
+        flags = 0
+        if opt.encrypt:
+            flags |= 1 << 0
+        if opt.sign:
+            flags |= 1 << 1
+        if opt.compress:
+            flags |= 1 << 2
+        if opt.radix64:
+            flags |= 1 << 3
+        if opt.algorithm == "AES":
+            flags |= 1 << 4
+
+        return flags.to_bytes(1, byteorder="big")
+
+    def encodeOptions(self,message:bytes, options:SendOptions)->bytes:
+        opt = self.encodeFlags(options)
+        return opt + message
+    def decodeOptions(self, originalMessage:bytes)->tuple[bytes,SendOptions]:
+        optionBytes = originalMessage[0:1]
+        message = originalMessage[1:]
+        options = self.decodeFlags(optionBytes)
+        return message, options
+
+
+    def toRadix64(self, message: bytes)-> bytes:
+        return base64.b64encode(message)
+
+    def fromRadix64(self, originalMessage:str)-> bytes:
+        message = base64.b64decode(originalMessage.encode("ascii"))
+        return  message
+    
 
