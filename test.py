@@ -8,6 +8,7 @@ from main_service import MainService
 from user import User
 from user_service import UserService
 from exception import SignatureVerificationError
+from send_options import SendOptions
 import os
 
 def testPrintRsa():
@@ -85,10 +86,10 @@ def testCompressDecompress():
     
 def testSegmentSvc():
     import secrets
-    msg = str(secrets.token_bytes(100000))
+    msg = secrets.token_bytes(100000)
     segSvc = SegmentationService()
     chunks = segSvc.split(msg)
-    reassembledMsg = segSvc.reassemble(chunks)
+    reassembledMsg = segSvc.reassemble([chunk for _, chunk in chunks])
     assert msg == reassembledMsg, "error, segmentation doesnt work"
     print("success")
 
@@ -96,8 +97,8 @@ def testSegmentSvc():
 def testEmailService():
     message = "Some mock message".encode()
     emailSvc = EmailService()
-    messageToRadix = emailSvc.toRadix64(message, "AES")
-    messageFromRadix, _ = emailSvc.fromRadix64(messageToRadix)
+    messageToRadix = emailSvc.toRadix64(message)
+    messageFromRadix = emailSvc.fromRadix64(messageToRadix)
     assert messageFromRadix == message, "Radix error"
     print ("Success")
 
@@ -107,8 +108,8 @@ def e2eCoreTest():
     senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     message = "Some mock message".encode()
-    chunks = pgpSvc.pgpEncrypt(message, receiverPub,senderPriv, "AES")
-    receivedeMsg = pgpSvc.pgpDecrypt(chunks,senderPub, receiverPriv)
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, SendOptions())
+    receivedeMsg = pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], senderPub, receiverPriv)
     assert receivedeMsg == message.decode(), "e2e core test failed, messages do not match"
     print("success")
 
@@ -126,8 +127,8 @@ def mainSvcTest():
     rsaSvc = RsaService()
     senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
-    mainSvc.send(message,"test_dest",senderPriv, receiverPub, "AES")
-    receivedMessage =mainSvc.receive("test_dest",senderPub, receiverPriv)
+    mainSvc.send(message, "test_dest", senderPriv, receiverPub, SendOptions())
+    receivedMessage = mainSvc.receive("test_dest", senderPub, receiverPriv)
     assert receivedMessage == message, "main svc doesnt work, messages dont match"
     print("success")
     
@@ -202,9 +203,9 @@ def testWrongDecryptionKey():
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     wrongPriv, _ = rsaSvc.generateKeyPair(2048)
 
-    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, "AES")
+    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, SendOptions())
     try:
-        pgpSvc.pgpDecrypt(chunks, senderPub, wrongPriv)
+        pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], senderPub, wrongPriv)
         assert False, "expected ValueError but no exception was raised"
     except ValueError:
         print("success")
@@ -218,9 +219,9 @@ def testWrongSenderKey():
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     _, wrongPub = rsaSvc.generateKeyPair(2048)
 
-    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, "AES")
+    chunks = pgpSvc.pgpEncrypt("secret".encode(), receiverPub, senderPriv, SendOptions())
     try:
-        pgpSvc.pgpDecrypt(chunks, wrongPub, receiverPriv)
+        pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], wrongPub, receiverPriv)
         assert False, "expected SignatureVerificationError but no exception was raised"
     except SignatureVerificationError:
         print("success")
@@ -233,14 +234,14 @@ def testTamperedMessage():
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     mainSvc = MainService()
 
-    mainSvc.send("original", "test_tampered_msg", senderPriv, receiverPub, "AES")
+    mainSvc.send("original", "test_tampered_msg", senderPriv, receiverPub, SendOptions())
 
-    with open("test_tampered_msg", "r") as f:
-        data = f.read()
+    with open("test_tampered_msg", "rb") as f:
+        data = bytearray(f.read())
     mid = len(data) // 2
-    tampered = data[:mid] + ("B" if data[mid] != "B" else "C") + data[mid + 1:]
-    with open("test_tampered_msg", "w") as f:
-        f.write(tampered)
+    data[mid] = (data[mid] ^ 0xFF)
+    with open("test_tampered_msg", "wb") as f:
+        f.write(data)
 
     try:
         mainSvc.receive("test_tampered_msg", senderPub, receiverPriv)
@@ -276,8 +277,8 @@ def testE2E3DES():
     senderPriv, senderPub = rsaSvc.generateKeyPair(2048)
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     message = "Some mock message".encode()
-    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, "3DES")
-    received = pgpSvc.pgpDecrypt(chunks, senderPub, receiverPriv)
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, SendOptions(algorithm="3DES"))
+    received = pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], senderPub, receiverPriv)
     assert received == message.decode(), "3DES e2e failed: messages do not match"
     print("success")
 
@@ -289,8 +290,8 @@ def testMixedKeySizes():
     senderPriv, senderPub = rsaSvc.generateKeyPair(1024)
     receiverPriv, receiverPub = rsaSvc.generateKeyPair(2048)
     message = "Mixed key size test".encode()
-    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, "AES")
-    received = pgpSvc.pgpDecrypt(chunks, senderPub, receiverPriv)
+    chunks = pgpSvc.pgpEncrypt(message, receiverPub, senderPriv, SendOptions())
+    received = pgpSvc.pgpDecrypt([chunk for _, chunk in chunks], senderPub, receiverPriv)
     assert received == message.decode(), "mixed key size e2e failed"
     print("success")
 
