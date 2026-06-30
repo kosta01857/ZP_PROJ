@@ -46,7 +46,7 @@ class PgpService:
             encryptedKey = self.encryptionService.encryptKs(Ks, receiverPU)
             message = encryptedKey + message
         if options.radix64:
-            message = self.emailService.toRadix64(message, options)
+            message = self.emailService.toRadix64(message)
         message = self.emailService.encodeOptions(message,options) 
         return self.segmentationService.split(message)
 
@@ -70,7 +70,7 @@ class PgpService:
             if (not self.authService.verify(data, signature, senderPU)):
                 raise SignatureVerificationError("Signature verification failed")
         
-        return data.decode("ascii" if options.radix64 else "utf-8")
+        return data.decode()
 
 
 
