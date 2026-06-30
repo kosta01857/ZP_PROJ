@@ -1,20 +1,17 @@
 class SegmentationService:
 
-    def split(self, message: str) -> list[str]:
+    def split(self, message: bytes) -> list[tuple[int,bytes]]:
         chunks = []
-        byte_length = len(message.encode('ascii'))
-
-        while byte_length > 50000:
-            chunk = message[0:50000]
-            chunks.append(chunk)
+        while len(message) > 50000:
+            chunk = message[:50000]
+            chunks.append((len(chunk), chunk))
             message = message[50000:]
-            byte_length = len(message.encode('ascii'))
-        chunks.append(message)
+        chunks.append((len(message), message))
         return chunks
 
 
-    def reassemble(self, chunks: list[str]) -> str:
-           message = "" 
+    def reassemble(self, chunks: list[bytes]) -> bytes:
+           message = bytes()
            for chunk in chunks:
                 message += chunk
            return message
