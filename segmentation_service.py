@@ -1,15 +1,12 @@
 class SegmentationService:
 
-    def split(self, message: bytes) -> list[bytes]:
+    def split(self, message: bytes) -> list[tuple[int,bytes]]:
         chunks = []
-        byte_length = len(message)
-
-        while byte_length > 50000:
-            chunk = message[0:50000]
-            chunks.append(chunk)
+        while len(message) > 50000:
+            chunk = message[:50000]
+            chunks.append((len(chunk), chunk))
             message = message[50000:]
-            byte_length = len(message)
-        chunks.append(message)
+        chunks.append((len(message), message))
         return chunks
 
 

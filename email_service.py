@@ -42,8 +42,8 @@ class EmailService:
     def toRadix64(self, message: bytes)-> bytes:
         return base64.b64encode(message)
 
-    def fromRadix64(self, originalMessage:str)-> bytes:
-        message = base64.b64decode(originalMessage.encode("ascii"))
+    def fromRadix64(self, originalMessage: bytes)-> bytes:
+        message = base64.b64decode(originalMessage)
         return  message
     
 

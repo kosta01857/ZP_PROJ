@@ -33,7 +33,7 @@ class PgpService:
 
 
     def pgpEncrypt(self,originalMessage: bytes, receiverPU: rsa.RSAPublicKey,
-              senderPR: rsa.RSAPrivateKey, options: SendOptions) -> list[str]:
+              senderPR: rsa.RSAPrivateKey, options: SendOptions) -> list[tuple[int,bytes]]:
         message = originalMessage
         if options.sign:
             signature = self.authService.sign(message, senderPR)
@@ -45,7 +45,6 @@ class PgpService:
             message = self.encryptionService.encryptMessage(message, Ks, options.algorithm)
             encryptedKey = self.encryptionService.encryptKs(Ks, receiverPU)
             message = encryptedKey + message
-        message = self.emailService.encodeOptions(message,options)
         if options.radix64:
             message = self.emailService.toRadix64(message, options)
         message = self.emailService.encodeOptions(message,options) 
@@ -56,8 +55,7 @@ class PgpService:
                  receiverPR: rsa.RSAPrivateKey) -> str:
         
         encryptedData = self.segmentationService.reassemble(encryptedData)
-        message , options = self.emailService.decodeOptions(encryptedData)
-        #ignorisano gore
+        data, options = self.emailService.decodeOptions(encryptedData)
         if options.radix64:
             data = self.emailService.fromRadix64(data)
         if options.encrypt:
@@ -69,10 +67,10 @@ class PgpService:
             data = self.compressionService.decompress(data)
         if options.sign:
             data, signature = self.splitMessage(data, senderPU.key_size // 8)
-            if (not self.authService.verify(message, signature, senderPU)):
+            if (not self.authService.verify(data, signature, senderPU)):
                 raise SignatureVerificationError("Signature verification failed")
         
-        return message.decode()
+        return data.decode("ascii" if options.radix64 else "utf-8")
 
 
 
