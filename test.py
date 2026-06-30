@@ -18,12 +18,12 @@ def testPrintRsa():
 def testRsaExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "testPub", "testPriv")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test_pub.pem", "test_priv.pem")
 
 def testRsaImportExport():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "testPub", "testPriv")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"password", "test_pub.pem", "test_priv.pem")
     privImp = rsaSvc.importPrivateRsaKey("test_priv.pem", b"password")
     pubImp = rsaSvc.importPublicRsaKey("test_pub.pem")
     assert priv.private_numbers().public_numbers.n == privImp.private_numbers().public_numbers.n, "priv errror"
@@ -113,7 +113,7 @@ def e2eCoreTest():
 def testWrongPassword():
     rsaSvc = RsaService()
     priv, pub = rsaSvc.generateKeyPair(2048)
-    rsaSvc.exportKeyPairToPem(pub, priv, b"correct_password", "testPub", "testPriv")
+    rsaSvc.exportKeyPairToPem(pub, priv, b"correct_password", "test_pub.pem", "test_priv.pem")
     result = rsaSvc.importPrivateRsaKey("test_priv.pem", b"wrong_password")
     assert result is None, "expected None for wrong password"
     print("success")
@@ -154,7 +154,7 @@ def testUserPrivateKeyRing():
     pub,priv = user.newKeyPair(1024,password)
     ring = user.loadPrivateKeyRing()
     rsaSvc = RsaService()
-    private_key = ring[0]
+    private_key = ring[-1]
     key_filename = private_key["pemFile"]
     importedPriv = rsaSvc.importPrivateRsaKey(key_filename,password.encode())
     assert importedPriv.private_numbers().d == priv.private_numbers().d, "failed , keys do not match"
@@ -168,7 +168,7 @@ def testUserPublicKeyRing():
 
     assert len(pubRing) > 0, "public key ring is empty"
 
-    publiKey = pubRing[0]
+    publiKey = pubRing[-1]
     assert publiKey["email"] == "ana@gmail.com", "email doesn't match"
     assert publiKey["name"] == "ana", "name doesn't match"
     assert publiKey["keySize"] == 1024, "key size mismatch"
@@ -180,9 +180,9 @@ def testDeleteKeyPair():
     pub, priv = user.newKeyPair(1024, password)
     ring = user.loadPrivateKeyRing()
     assert len(ring) > 0, "key was not created"
-    keyId = ring[0]["keyId"]
+    keyId = ring[-1]["keyId"]
 
-    result = user.deleteKeyPair(keyId)
+    result = user.deleteKeyPair(ring[-1])
     assert result == True, "delete failed"
     ring_after = user.loadPrivateKeyRing()
 
@@ -190,3 +190,39 @@ def testDeleteKeyPair():
         assert k["keyId"] != keyId, "key not deleted"
 
     print("delete success")
+
+
+if __name__ == "__main__":
+    tests = [
+        ("testPrintRsa",           testPrintRsa),
+        ("testRsaExport",          testRsaExport),
+        ("testRsaImportExport",    testRsaImportExport),
+        ("testDigialSignature",    testDigialSignature),
+        ("testRsaEncryption",      testRsaEncryption),
+        ("testKsEncryption",       testKsEncryption),
+        ("testEncryptDecryptMessage", testEncryptDecryptMessage),
+        ("testCompressDecompress", testCompressDecompress),
+        ("testSegmentSvc",         testSegmentSvc),
+        ("testEmailService",       testEmailService),
+        ("testWrongPassword",      testWrongPassword),
+        ("e2eCoreTest",            e2eCoreTest),
+        ("mainSvcTest",            mainSvcTest),
+        ("userServiceTest",        userServiceTest),
+        ("testUserPrivateKeyRing", testUserPrivateKeyRing),
+        ("testUserPublicKeyRing",  testUserPublicKeyRing),
+        ("testDeleteKeyPair",      testDeleteKeyPair),
+    ]
+
+    passed = 0
+    failed = 0
+    for name, fn in tests:
+        print(f"\n--- {name} ---")
+        try:
+            fn()
+            passed += 1
+        except Exception as e:
+            print(f"FAILED: {e}")
+            failed += 1
+
+    print(f"\n{'='*40}")
+    print(f"Results: {passed} passed, {failed} failed")
