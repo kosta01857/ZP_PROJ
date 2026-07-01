@@ -178,3 +178,44 @@ class User:
                 return True
 
         return False
+
+    def importKeyPair(self, privFilename: str, pubFilename: str, password: str):
+        priv = self.rsaSvc.importPrivateRsaKey(privFilename, password.encode())
+        if priv is None:
+            raise ValueError("Failed to import private key — wrong password?")
+        pub = self.rsaSvc.importPublicRsaKey(pubFilename)
+        keyId = self._deriveKeyId(pub)
+
+        privKeys = self.loadPrivateKeyRing()
+        if any(k["keyId"] == keyId for k in privKeys):
+            raise ValueError(f"Key pair {keyId} is already in the ring.")
+
+        fileUuid = uuid.uuid4()
+        destPriv = os.path.join(self.privateKeyRingPath, f"{fileUuid}.pem")
+        destPub = os.path.join(self.publicKeyRingPath, f"{fileUuid}_pub.pem")
+        self.rsaSvc.exportPrivateKeyToPem(priv, password.encode(), destPriv)
+        self.rsaSvc.exportPublicKeyToPem(pub, destPub)
+
+        timestamp = datetime.now().isoformat()
+        privKeys.append({
+            "keyId": keyId,
+            "keySize": priv.key_size,
+            "timestamp": timestamp,
+            "pemFile": destPriv,
+        })
+        with open(self.privateJson, "w") as f:
+            json.dump(privKeys, f, indent=4)
+
+        pubKeys = self.loadPublicKeyRing()
+        pubKeys.append({
+            "keyId": keyId,
+            "name": self.name,
+            "email": self.email,
+            "keySize": pub.key_size,
+            "timestamp": timestamp,
+            "pemFile": destPub,
+        })
+        with open(self.publicJson, "w") as f:
+            json.dump(pubKeys, f, indent=4)
+
+        return pub, priv

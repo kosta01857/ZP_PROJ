@@ -144,6 +144,68 @@ class ImportPublicKeyDialog(QDialog):
         )
 
 
+class ImportKeyPairDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Import Key Pair")
+        layout = QFormLayout(self)
+
+        priv_row = QHBoxLayout()
+        self.priv_edit = QLineEdit()
+        self.priv_edit.setReadOnly(True)
+        priv_browse = QPushButton("Browse...")
+        priv_browse.clicked.connect(self._browse_priv)
+        priv_row.addWidget(self.priv_edit)
+        priv_row.addWidget(priv_browse)
+
+        pub_row = QHBoxLayout()
+        self.pub_edit = QLineEdit()
+        self.pub_edit.setReadOnly(True)
+        pub_browse = QPushButton("Browse...")
+        pub_browse.clicked.connect(self._browse_pub)
+        pub_row.addWidget(self.pub_edit)
+        pub_row.addWidget(pub_browse)
+
+        self.password_edit = QLineEdit()
+        self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+
+        layout.addRow("Private key (.pem):", priv_row)
+        layout.addRow("Public key (.pem):", pub_row)
+        layout.addRow("Password:", self.password_edit)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _browse_priv(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Open Private Key", "", "PEM files (*.pem);;All files (*)")
+        if path:
+            self.priv_edit.setText(path)
+
+    def _browse_pub(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Open Public Key", "", "PEM files (*.pem);;All files (*)")
+        if path:
+            self.pub_edit.setText(path)
+
+    def _accept(self):
+        if not self.priv_edit.text():
+            QMessageBox.warning(self, "Error", "Select a private key file.")
+            return
+        if not self.pub_edit.text():
+            QMessageBox.warning(self, "Error", "Select a public key file.")
+            return
+        if not self.password_edit.text():
+            QMessageBox.warning(self, "Error", "Password cannot be empty.")
+            return
+        self.accept()
+
+    def get_data(self):
+        return self.priv_edit.text(), self.pub_edit.text(), self.password_edit.text()
+
+
 class KeyRingTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
@@ -166,9 +228,9 @@ class KeyRingTab(QWidget):
         priv_btns = QHBoxLayout()
         for label, slot in [
             ("Generate Key Pair", self._generate_key),
+            ("Import Key Pair", self._import_key_pair),
             ("Delete Key Pair", self._delete_pair),
             ("Export Private Key", self._export_private),
-            ("Export Public Key", self._export_public_from_priv),
         ]:
             btn = QPushButton(label)
             btn.clicked.connect(slot)
@@ -284,24 +346,24 @@ class KeyRingTab(QWidget):
             self.mw.log(f"ERROR exporting private key  key_id={key_id}  (wrong password?)")
             QMessageBox.critical(self, "Error", "Export failed. Wrong password?")
 
-    def _export_public_from_priv(self):
+    def _import_key_pair(self):
         user = self.mw.current_user()
         if user is None:
+            QMessageBox.warning(self, "No User", "Select or create a user first.")
             return
-        row = self.priv_table.currentRow()
-        if row < 0:
-            QMessageBox.warning(self, "No Selection", "Select a key to export.")
+        dlg = ImportKeyPairDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        key_id = self.priv_table.item(row, 0).text()
-        dest, _ = QFileDialog.getSaveFileName(self, "Save Public Key", "", "PEM files (*.pem)")
-        if not dest:
-            return
-        if user.exportPublicKey(key_id, dest):
-            self.mw.log(f"Exported public key  key_id={key_id}  -> {dest}")
-            QMessageBox.information(self, "Success", "Public key exported.")
-        else:
-            self.mw.log(f"ERROR exporting public key  key_id={key_id}")
-            QMessageBox.critical(self, "Error", "Export failed.")
+        priv_path, pub_path, password = dlg.get_data()
+        try:
+            user.importKeyPair(priv_path, pub_path, password)
+            self.refresh()
+            self.mw.refresh_key_selectors()
+            new_key = user.loadPrivateKeyRing()[-1]
+            self.mw.log(f"Imported key pair  key_id={new_key['keyId']}  user={user.name}")
+        except Exception as e:
+            self.mw.log(f"ERROR importing key pair: {e}")
+            QMessageBox.critical(self, "Error", str(e))
 
     def _import_public(self):
         user = self.mw.current_user()
