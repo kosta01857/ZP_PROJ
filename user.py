@@ -17,11 +17,11 @@ class User:
         self.name = name
         self.email = email
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        self.path = os.path.join(BASE_DIR, "storage", "users", self.name)
+        self.path = os.path.join(BASE_DIR, "storage", "users", self.email)
         self.publicKeyRingPath = os.path.join(BASE_DIR, "storage", "users",
-                                                   self.name, "public_ring")
+                                                   self.email, "public_ring")
         self.privateKeyRingPath = os.path.join(BASE_DIR, "storage", "users",
-                                                  self.name, "private_ring")
+                                                  self.email, "private_ring")
         self.createFolders()
         self.publicJson = os.path.join(self.publicKeyRingPath,"public_keys.json")
         self.privateJson = os.path.join(self.privateKeyRingPath,"private_keys.json")
@@ -30,8 +30,10 @@ class User:
         self.rsaSvc = RsaService()
 
     
-    #Generise key id
-    def _deriveKeyId(self, pub: rsa.RSAPublicKey) -> str:
+
+    #Generise key id na osnovu javnog kljuca
+    @staticmethod
+    def _deriveKeyId(pub: rsa.RSAPublicKey) -> str:
         pub_bytes = pub.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
         return hashlib.sha1(pub_bytes).hexdigest()[-16:]
 
