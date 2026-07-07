@@ -590,25 +590,12 @@ class ReceiveTab(QWidget):
         src_layout.addWidget(browse_btn)
         layout.addWidget(src_group)
 
-        keys_row = QHBoxLayout()
-
-        sender_group = QGroupBox("Sender's Public Key (verification)")
-        sender_layout = QFormLayout(sender_group)
-        self.sender_key_combo = QComboBox()
-        sender_layout.addRow("Key:", self.sender_key_combo)
-        keys_row.addWidget(sender_group)
-
-        recv_group = QGroupBox("My Private Key (decryption)")
-        recv_layout = QFormLayout(recv_group)
-        self.recv_key_combo = QComboBox()
-        self.recv_password_edit = QLineEdit()
-        self.recv_password_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.recv_password_edit.setPlaceholderText("Password for private key")
-        recv_layout.addRow("Key:", self.recv_key_combo)
-        recv_layout.addRow("Password:", self.recv_password_edit)
-        keys_row.addWidget(recv_group)
-
-        layout.addLayout(keys_row)
+        info_label = QLabel(
+            "The sender's and recipient's keys are identified automatically from the "
+            "message. You'll be asked for your private-key password to decrypt."
+        )
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
 
         recv_btn = QPushButton("Receive / Decrypt")
         recv_btn.setFixedHeight(40)
@@ -632,16 +619,6 @@ class ReceiveTab(QWidget):
         msg_layout.addWidget(save_btn)
         layout.addWidget(msg_group)
 
-    def refresh_keys(self, priv_keys, pub_keys):
-        self.sender_key_combo.clear()
-        for k in pub_keys:
-            label = f"{k['keyId']}  {k.get('name', '')} <{k.get('email', '')}>"
-            self.sender_key_combo.addItem(label, k["keyId"])
-
-        self.recv_key_combo.clear()
-        for k in priv_keys:
-            self.recv_key_combo.addItem(f"{k['keyId']}  ({k['keySize']} bit)", k["keyId"])
-
     def _browse_src(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Message File", "", "PGP files (*.pgp);;All files (*)"
@@ -658,35 +635,51 @@ class ReceiveTab(QWidget):
         if not src:
             QMessageBox.warning(self, "Error", "Choose a source file.")
             return
-        if self.sender_key_combo.count() == 0:
-            QMessageBox.warning(self, "Error", "No public keys available for verification.")
-            return
-        if self.recv_key_combo.count() == 0:
-            QMessageBox.warning(self, "Error", "No private keys available for decryption.")
-            return
-
-        sender_key_id = self.sender_key_combo.currentData()
-        recv_key_id = self.recv_key_combo.currentData()
 
         self.mw.log(f"RECEIVE  user={user.name}  src={src}")
-        self.mw.log(f"  sender_key={sender_key_id}  recv_key={recv_key_id}")
 
-        sender_pub = user.getPublicKey(sender_key_id)
-        if sender_pub is None:
-            self.mw.log(f"ERROR: failed to load sender public key {sender_key_id}")
-            QMessageBox.critical(self, "Error", "Failed to load sender's public key.")
+        # Identifikuj kljuceve iz same poruke (samo pretraga prstena, bez lozinke).
+        try:
+            sender_info, recv_info = self.mw.main_svc.resolveKeyIds(src, user)
+        except Exception as e:
+            self.mw.log(f"  ERROR resolving keys — {e}")
+            QMessageBox.critical(self, "Error", f"Could not identify keys for this message:\n{e}")
             return
-        self.mw.log(f"  sender public key loaded  key_size={sender_pub.key_size}")
 
-        recv_priv = user.getPrivateKey(recv_key_id, self.recv_password_edit.text().encode())
-        if recv_priv is None:
-            self.mw.log(f"ERROR: failed to load private key {recv_key_id} (wrong password?)")
-            QMessageBox.critical(self, "Error", "Failed to load private key. Wrong password?")
-            return
-        self.mw.log(f"  receiver private key loaded  key_size={recv_priv.key_size}")
+        # recv_info is None -> poruka nije enkriptovana (nije potreban privatni kljuc/lozinka)
+        # sender_info is None -> poruka nije potpisana (nema verifikacije)
+        name = sender_info.get("name", "") if sender_info else ""
+        email = sender_info.get("email", "") if sender_info else ""
 
-        pub_keys = user.loadPublicKeyRing()
-        sender_info = next((k for k in pub_keys if k["keyId"] == sender_key_id), None)
+        recv_priv = None
+        if recv_info is not None:
+            recv_key_id = recv_info["keyId"]
+            self.mw.log(f"  encrypted to your key {recv_key_id} ({recv_info.get('keySize', '?')} bit)")
+            # Tek sad kad znamo koji privatni kljuc treba, trazimo lozinku za njega.
+            password = ask_password(self, f"Unlock private key {recv_key_id}")
+            if password is None:
+                return
+            recv_priv = user.getPrivateKey(recv_key_id, password.encode())
+            if recv_priv is None:
+                self.mw.log(f"ERROR: failed to load private key {recv_key_id} (wrong password?)")
+                QMessageBox.critical(self, "Error", "Failed to load private key. Wrong password?")
+                return
+            self.mw.log(f"  receiver private key loaded  key_size={recv_priv.key_size}")
+        else:
+            self.mw.log("  message is not encrypted")
+
+        sender_pub = None
+        if sender_info is not None:
+            sender_key_id = sender_info["keyId"]
+            self.mw.log(f"  signed by {name} <{email}>  (key {sender_key_id})")
+            sender_pub = user.getPublicKey(sender_key_id)
+            if sender_pub is None:
+                self.mw.log(f"ERROR: failed to load sender public key {sender_key_id}")
+                QMessageBox.critical(self, "Error", "Failed to load sender's public key.")
+                return
+            self.mw.log(f"  sender public key loaded  key_size={sender_pub.key_size}")
+        else:
+            self.mw.log("  message is not signed")
 
         self.message_display.clear()
         self.status_label.setText("")
@@ -694,11 +687,14 @@ class ReceiveTab(QWidget):
         try:
             message = self.mw.main_svc.receive(src, sender_pub, recv_priv)
             self.message_display.setPlainText(message)
-            name = sender_info.get("name", "") if sender_info else ""
-            email = sender_info.get("email", "") if sender_info else ""
-            self.mw.log(f"  OK — signature verified, signed by {name} <{email}>")
-            self.status_label.setStyleSheet("color: green;")
-            self.status_label.setText(f"Signature verified — signed by {name} <{email}>")
+            if sender_info is not None:
+                self.mw.log(f"  OK — signature verified, signed by {name} <{email}>")
+                self.status_label.setStyleSheet("color: green;")
+                self.status_label.setText(f"Signature verified — signed by {name} <{email}>")
+            else:
+                self.mw.log("  OK — message decrypted (not signed)")
+                self.status_label.setStyleSheet("color: green;")
+                self.status_label.setText("Message decrypted (not signed)")
         except SignatureVerificationError:
             self.mw.log(f"  FAIL — signature verification failed")
             self.status_label.setStyleSheet("color: red;")
@@ -817,12 +813,10 @@ class MainWindow(QMainWindow):
         user = self.current_user()
         if user is None:
             self.send_tab.refresh_keys([], [])
-            self.receive_tab.refresh_keys([], [])
             return
         priv_keys = user.loadPrivateKeyRing()
         pub_keys = user.loadPublicKeyRing()
         self.send_tab.refresh_keys(priv_keys, pub_keys)
-        self.receive_tab.refresh_keys(priv_keys, pub_keys)
 
 
 if __name__ == "__main__":

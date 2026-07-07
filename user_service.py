@@ -2,7 +2,6 @@ import json
 import os
 from user import User
 
-
 class UserService:
     #Lista usera, brise, cuva,kreira
     def __init__(self):
