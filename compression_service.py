@@ -1,4 +1,5 @@
 import zlib
+# Koristi zlib da kompresuje i dekompresuje (zip)
 class CompressionService:
 
     def compress(self, message: bytes) -> bytes:

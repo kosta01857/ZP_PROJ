@@ -4,7 +4,7 @@ from user import User
 
 
 class UserService:
-
+    #Lista usera, brise, cuva,kreira
     def __init__(self):
         self.users = []
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -28,16 +28,18 @@ class EmailService:
             flags |= 1 << 4
 
         return flags.to_bytes(1, byteorder="big")
-
+    
+    #Enkoduje opcije i spaja ih sa porukom
     def encodeOptions(self,message:bytes, options:SendOptions)->bytes:
         opt = self.encodeFlags(options)
         return opt + message
+    #Dekoduje: prvi bajt flag opcije, ostatak je poruka
+
     def decodeOptions(self, originalMessage:bytes)->tuple[bytes,SendOptions]:
         optionBytes = originalMessage[0:1]
         message = originalMessage[1:]
         options = self.decodeFlags(optionBytes)
         return message, options
-
 
     def toRadix64(self, message: bytes)-> bytes:
         return base64.b64encode(message)

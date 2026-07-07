@@ -2,6 +2,8 @@ from hashlib import sha1
 from cryptography.hazmat.primitives.asymmetric import rsa
 from rsa_service import RsaService
 
+#Delegira potpisivanje i verifikaciju RSA servisu
+
 class AuthService:
     def __init__(self):
         self.rsaSvc = RsaService()

@@ -1,4 +1,0 @@
-# GUI 
-    # choose algorithm, public , private keys...
-# choose file to write and read message from
-# operacije nisu optional

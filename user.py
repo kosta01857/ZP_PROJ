@@ -8,6 +8,10 @@ from datetime import datetime
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
+#Ima svoje ime, email, rsaSvc i putanje ka fajlovima
+#Generise keyID na osnovu Pub
+#Importuje, eksportuje kljuceve i parove kljuceva, brise par kljuceva
+
 class User:
     def __init__(self, name: str, email: str):
         self.name = name
@@ -26,7 +30,7 @@ class User:
         self.rsaSvc = RsaService()
 
     
-    
+    #Generise key id
     def _deriveKeyId(self, pub: rsa.RSAPublicKey) -> str:
         pub_bytes = pub.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
         return hashlib.sha1(pub_bytes).hexdigest()[-16:]
@@ -49,8 +53,8 @@ class User:
         priv, pub = self.rsaSvc.generateKeyPair(size)
         keyId = self._deriveKeyId(pub)
         fileUuid = uuid.uuid4()
-        filename = os.path.join(self.privateKeyRingPath,f"{fileUuid}.pem")
-        filenamePub = os.path.join(self.publicKeyRingPath,f"{fileUuid}_pub.pem")
+        filename = os.path.join(self.privateKeyRingPath,f"{fileUuid}.pem") 
+        filenamePub = os.path.join(self.publicKeyRingPath,f"{fileUuid}_pub.pem") # moj kljuc za mene
         self.rsaSvc.exportPrivateKeyToPem(priv,password.encode(),filename)
         self.rsaSvc.exportPublicKeyToPem(pub,filenamePub)
         timestamp = datetime.now().isoformat()

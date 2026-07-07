@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 import secrets
 from rsa_service import RsaService
-
+#Ima svoj rsa servise, enkriptuje/dekriptuje poruke (iv+poruka), e/d KS pomocu rsa
 class EncryptionService:
     def __init__(self):
         self.rsaSvc = RsaService()
@@ -11,23 +11,23 @@ class EncryptionService:
     def encryptMessage(self, message: bytes, Ks: bytes, algorithm: str):
         if algorithm == "AES":
             algorithmChoice = algorithms.AES(Ks)
-            iv = secrets.token_bytes(16)
+            iv = secrets.token_bytes(16) #nonce
             blockSize = 128
 
         elif algorithm == "3DES":
             algorithmChoice = algorithms.TripleDES(Ks)
-            iv = secrets.token_bytes(8)
+            iv = secrets.token_bytes(8) #nonce
             blockSize = 64
 
         else:
             raise ValueError("Unsupported algorithm")
 
-        padder = padding.PKCS7(blockSize).padder()
+        padder = padding.PKCS7(blockSize).padder() #Dodaje padding na poruku
         padded = padder.update(message) + padder.finalize()
         cipher = Cipher(algorithmChoice, modes.CFB(iv))
         encryptor = cipher.encryptor()
         cipherText = encryptor.update(padded) + encryptor.finalize()
-        return iv + cipherText
+        return iv + cipherText #zalepi iv i cipher
 
     def decryptMessage(self, messageIv: bytes, Ks: bytes, algorithm: str):
         if algorithm == "AES":
@@ -50,7 +50,7 @@ class EncryptionService:
         padded = decryptor.update(message) + decryptor.finalize()
         unpadder = padding.PKCS7(block_size).unpadder()
         return unpadder.update(padded) + unpadder.finalize()
-
+    #Enkriptuje KS preko rsa
     def encryptKs(self, Ks: bytes, pub: rsa.RSAPublicKey) -> bytes:
         return self.rsaSvc.encryptMessage(Ks, pub)
 

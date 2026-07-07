@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from cryptography.hazmat.primitives import serialization
-
+#Generise par kljuceva, ekspotuje u pem, importuje rsa key, generise i verifikuje potpise
 class RsaService:
     def generateKeyPair(self, size) -> tuple[rsa.RSAPrivateKey,
                                               rsa.RSAPublicKey]:

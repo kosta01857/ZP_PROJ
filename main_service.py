@@ -15,7 +15,7 @@ class MainService:
         encryptedMessages = self.pgpSvc.pgpEncrypt(byteMessage, receiverPub, senderPriv, opt)
         with open(dest , "wb") as f:
             for chunk_len,chunk in encryptedMessages:
-                f.write(chunk_len.to_bytes(4,"big") + chunk)
+                f.write(chunk_len.to_bytes(4,"big") + chunk) # duzina chunka na 4 bajta pa chunk
 
 
     def receive(self, source: str, senderPub: rsa.RSAPublicKey, receiverPriv: rsa.RSAPrivateKey) -> str:
@@ -23,7 +23,7 @@ class MainService:
         with open(source, "rb") as f:
             while True:
                 header = f.read(4)
-                if len(header) < 4:
+                if len(header) < 4: #Ako nije 4 onda je EOF, cita cak i poslednji kraci
                     break
                 chunk_len = int.from_bytes(header, "big")
                 chunk = f.read(chunk_len)
